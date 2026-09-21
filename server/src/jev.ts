@@ -1,0 +1,168 @@
+import type {
+  DecideRequest,
+  DecideResponse,
+  GapChoice,
+  HeightChoice,
+  HunterMove,
+  SurfaceKind,
+  TerrainSegmentSpec,
+  WidthChoice,
+} from "../../shared/types.ts";
+import {
+  GAPS,
+  HEIGHTS,
+  HUNTER_MOVES,
+  SURFACES,
+  WIDTHS,
+} from "../../shared/types.ts";
+import { safeHunterMove, safeTerrain } from "./fallback.ts";
+import { buildJevBody, clampSegments, JEV_MODEL } from "./questions.ts";
+
+const JEV_URL = "https://api.typesafe.ai/v1/systemone";
+const JEV_TIMEOUT_MS = 750;
+
+interface JevChoiceAnswer {
+  type?: string;
+  choice?: string | number;
+}
+
+interface JevApiResponse {
+  model?: string;
+  answers?: Record<string, JevChoiceAnswer>;
+}
+
+export async function decide(req: DecideRequest): Promise<DecideResponse> {
+  const started = Date.now();
+  const terrainCount = clampSegments(req.ask.terrainSegments);
+  const wantHunter = Boolean(req.ask.hunter);
+
+  if (terrainCount === 0 && !wantHunter) {
+    return {
+      ok: false,
+      source: "fallback",
+      latencyMs: Date.now() - started,
+      warning: "Nothing to decide",
+      terrain: [],
+    };
+  }
+
+  const key = process.env.TYPESAFE_API_KEY?.trim();
+  if (!key) {
+    return fallbackResult(
+      terrainCount,
+      wantHunter,
+      started,
+      "No TYPESAFE_API_KEY — using safe terrain",
+    );
+  }
+
+  const body = buildJevBody(req.state, {
+    terrainSegments: terrainCount || undefined,
+    hunter: wantHunter,
+  });
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), JEV_TIMEOUT_MS);
+    const res = await fetch(JEV_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      return fallbackResult(
+        terrainCount,
+        wantHunter,
+        started,
+        `Jev HTTP ${res.status}${detail ? ` — ${detail.slice(0, 120)}` : ""}`,
+      );
+    }
+
+    const data = (await res.json()) as JevApiResponse;
+    const answers = data.answers ?? {};
+    const terrain = parseTerrain(answers, terrainCount);
+    const hunterMove = wantHunter
+      ? pick(asChoice(answers.hunter_move), HUNTER_MOVES, safeHunterMove())
+      : undefined;
+
+    return {
+      ok: true,
+      source: "jev",
+      latencyMs: Date.now() - started,
+      model: data.model ?? JEV_MODEL,
+      terrain,
+      hunterMove,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? "Jev timed out — using safe terrain"
+        : `Jev request failed — ${error instanceof Error ? error.message : "error"}`;
+    return fallbackResult(terrainCount, wantHunter, started, message);
+  }
+}
+
+function fallbackResult(
+  terrainCount: number,
+  wantHunter: boolean,
+  started: number,
+  warning: string,
+): DecideResponse {
+  return {
+    ok: false,
+    source: "fallback",
+    latencyMs: Date.now() - started,
+    warning,
+    error: warning,
+    terrain: terrainCount > 0 ? safeTerrain(terrainCount) : [],
+    hunterMove: wantHunter ? safeHunterMove() : undefined,
+  };
+}
+
+function parseTerrain(
+  answers: Record<string, JevChoiceAnswer>,
+  count: number,
+): TerrainSegmentSpec[] {
+  const out: TerrainSegmentSpec[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const p = i === 0 ? "" : `s${i}_`;
+    out.push({
+      surface: pick(asChoice(answers[`${p}next_surface`]), SURFACES, "solid"),
+      width: pickNum(asChoice(answers[`${p}width`]), WIDTHS, 5),
+      gap: pickNum(asChoice(answers[`${p}gap`]), GAPS, 0),
+      height: pickNum(asChoice(answers[`${p}height`]), HEIGHTS, 5),
+    });
+  }
+  return out;
+}
+
+function asChoice(answer: JevChoiceAnswer | undefined): string | undefined {
+  if (answer?.choice === undefined || answer.choice === null) return undefined;
+  return String(answer.choice);
+}
+
+function pick<T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  return value && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback;
+}
+
+function pickNum<T extends number>(
+  value: string | undefined,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  const n = value === undefined ? Number.NaN : Number(value);
+  return (allowed as readonly number[]).includes(n) ? (n as T) : fallback;
+}
