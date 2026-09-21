@@ -8,6 +8,7 @@ import type {
   MotifKind,
 } from "@shared/types.ts";
 import {
+  AUTO_RUN,
   BUFFER_SCREENS,
   COMBO_BONUS,
   COMBO_WINDOW_MS,
@@ -202,6 +203,39 @@ export class PlayScene extends Phaser.Scene {
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
     this.pullDecisions(true, HUNTERS_ENABLED);
     this.emitHud();
+    this.exposePadDebug();
+  }
+
+  private exposePadDebug(): void {
+    if (!DEBUG_PAD_LABELS) return;
+    const scene = this;
+    (window as Window & { __neonChase?: unknown }).__neonChase = {
+      snapshot() {
+        const vx = scene.player.vx || AUTO_RUN;
+        return {
+          player: {
+            x: Math.round(scene.player.x),
+            vx: Math.round(vx),
+            hp: scene.player.hp,
+            score: scene.score(),
+          },
+          pads: scene.world.segments
+            .filter((seg) => seg.spec.surface !== "spike")
+            .map((seg) => {
+              const padPx = seg.spec.width * TILE;
+              return {
+                surface: seg.spec.surface,
+                tiles: seg.spec.width,
+                padPx,
+                gap: seg.spec.gap,
+                startX: Math.round(seg.startX),
+                dwellAtAutoRun: Number((padPx / AUTO_RUN).toFixed(3)),
+                dwellAtPlayerVx: Number((padPx / Math.max(60, vx)).toFixed(3)),
+              };
+            }),
+        };
+      },
+    };
   }
 
   update(_time: number, delta: number): void {
