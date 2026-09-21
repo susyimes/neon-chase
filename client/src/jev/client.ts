@@ -1,4 +1,4 @@
-import type { DecideRequest, DecideResponse, HealthResponse } from "@shared/types.ts";
+import type { CompactGameState, DecideRequest, DecideResponse, HealthResponse } from "@shared/types.ts";
 import { JEV_TIMEOUT_MS } from "../config.ts";
 import { localFallback } from "../game/world/fallback.ts";
 
@@ -9,12 +9,15 @@ export class JevService {
   warning: string | null = null;
   inFlight = 0;
 
-  snapshotState(state: DecideRequest["state"]): DecideRequest["state"] {
+  snapshotState(state: CompactGameState): CompactGameState {
     return {
       player: { ...state.player },
       hunter: { ...state.hunter },
       ahead: state.ahead.slice(0, 8),
       score: Math.floor(state.score),
+      hurts: Math.max(0, Math.floor(state.hurts)),
+      lastEvent: state.lastEvent,
+      motif: state.motif,
     };
   }
 

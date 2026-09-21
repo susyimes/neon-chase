@@ -1,3 +1,4 @@
+import { safeDirector } from "@shared/defaults.ts";
 import type {
   DecideRequest,
   DecideResponse,
@@ -16,6 +17,7 @@ export function safeSpecs(count: number): TerrainSegmentSpec[] {
 
 export function localFallback(req: DecideRequest, warning: string): DecideResponse {
   const n = req.ask.terrainSegments ?? 0;
+  const wantHunter = Boolean(req.ask.hunter);
   return {
     ok: false,
     source: "fallback",
@@ -23,6 +25,11 @@ export function localFallback(req: DecideRequest, warning: string): DecideRespon
     warning,
     error: warning,
     terrain: n > 0 ? safeSpecs(n) : [],
-    hunterMove: req.ask.hunter ? "chase" : undefined,
+    hunterMove: wantHunter ? "chase" : undefined,
+    director: safeDirector({
+      hunter: wantHunter,
+      motif: req.state?.motif,
+      lastEvent: req.state?.lastEvent,
+    }),
   };
 }

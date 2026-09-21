@@ -1,19 +1,33 @@
 import Phaser from "phaser";
-import type { CompactGameState, HunterMove } from "@shared/types.ts";
+import type {
+  CompactGameState,
+  DirectorPlan,
+  EventBeat,
+  HunterTactics,
+  JuiceCue,
+  MotifKind,
+} from "@shared/types.ts";
 import {
   BUFFER_SCREENS,
+  COMBO_BONUS,
+  COMBO_WINDOW_MS,
   GAME_HEIGHT,
-  GAME_WIDTH,
   GRAVITY,
   HUNTER_TICK_MS,
   MAX_HP,
+  NEAR_MISS_PX,
   ORB_SCORE,
   TERRAIN_BATCH,
   TILE,
 } from "../../config.ts";
+import { audio } from "../../audio/AudioBus.ts";
+import { CYAN, GOLD, MAGENTA } from "../../palette.ts";
 import type { ControlState } from "../entities/Player.ts";
 import { Hunter } from "../entities/Hunter.ts";
 import { Player } from "../entities/Player.ts";
+import { juice } from "../fx/Juice.ts";
+import { makeGameTextures } from "../fx/textures.ts";
+import { Backdrop } from "../world/Backdrop.ts";
 import { safeSpecs } from "../world/fallback.ts";
 import { TerrainWorld } from "../world/TerrainWorld.ts";
 import type { JevService } from "../../jev/client.ts";
@@ -34,12 +48,18 @@ export interface HudSnapshot {
   source: "jev" | "fallback" | "none";
   warning: string | null;
   hunterMove: string;
+  motif: MotifKind;
+  event: EventBeat;
+  juiceCue: JuiceCue;
+  difficulty: number;
+  combo: number;
 }
 
 export interface RunResult {
   score: number;
   distance: number;
   callCount: number;
+  combo: number;
 }
 
 export class PlayScene extends Phaser.Scene {
@@ -49,6 +69,8 @@ export class PlayScene extends Phaser.Scene {
   private world!: TerrainWorld;
   private player!: Player;
   private hunter!: Hunter;
+  private backdrop!: Backdrop;
+  private playerGlow!: Phaser.GameObjects.Image;
   private keys!: {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
@@ -64,6 +86,18 @@ export class PlayScene extends Phaser.Scene {
   private hunterBusy = false;
   private ended = false;
   private orbsCollected = 0;
+  private orbBonus = 0;
+  private combo = 0;
+  private peakCombo = 0;
+  private lastOrbAt = 0;
+  private hurts = 0;
+  private motif: MotifKind = "neon_alley";
+  private lastEvent: EventBeat = "none";
+  private juiceCue: JuiceCue = "pulse";
+  private difficulty = 3;
+  private nearMissCool = 0;
+  private trailingDash = false;
+  private finishing = false;
 
   constructor() {
     super(PlayScene.KEY);
@@ -75,7 +109,17 @@ export class PlayScene extends Phaser.Scene {
 
   create(): void {
     this.ended = false;
+    this.finishing = false;
     this.orbsCollected = 0;
+    this.orbBonus = 0;
+    this.combo = 0;
+    this.peakCombo = 0;
+    this.lastOrbAt = 0;
+    this.hurts = 0;
+    this.motif = "neon_alley";
+    this.lastEvent = "none";
+    this.juiceCue = "pulse";
+    this.difficulty = 3;
     this.hooks.jev.callCount = 0;
     this.hooks.jev.warning = null;
     this.hooks.jev.lastSource = "none";
@@ -83,8 +127,12 @@ export class PlayScene extends Phaser.Scene {
     this.physics.world.gravity.y = GRAVITY;
     this.physics.world.setBounds(0, 0, Number.MAX_SAFE_INTEGER, GAME_HEIGHT + 80);
     this.cameras.main.setBackgroundColor(0x050510);
-    this.paintBackdrop();
-    this.makeTextures();
+    this.cameras.main.fadeIn(280, 5, 5, 16);
+
+    makeGameTextures(this);
+    juice.attach(this);
+    this.backdrop = new Backdrop(this);
+    this.backdrop.setMotif(this.motif);
 
     this.world = new TerrainWorld(this);
     this.world.append(safeSpecs(8), "fallback");
@@ -93,18 +141,21 @@ export class PlayScene extends Phaser.Scene {
     const playerSprite = this.physics.add.sprite(spawn.x, spawn.y, "runner");
     this.player = new Player(playerSprite);
     this.player.spawn(spawn.x, spawn.y);
+    this.playerGlow = this.add.image(spawn.x, spawn.y, "runner-glow");
+    this.playerGlow.setBlendMode(Phaser.BlendModes.ADD);
+    this.playerGlow.setDepth(4);
+    this.playerGlow.setAlpha(0.55);
 
     const hunterSprite = this.physics.add.sprite(spawn.x - 160, spawn.y - 20, "hunter");
     this.hunter = new Hunter(hunterSprite);
+    const hunterGlow = this.add.image(hunterSprite.x, hunterSprite.y, "hunter-glow");
+    this.hunter.attachGlow(hunterGlow);
     this.hunter.apply("chase", this.player.x, this.player.y, 0);
 
     this.physics.add.collider(this.player.sprite, this.world.platforms);
     this.physics.add.overlap(this.player.sprite, this.world.spikes, () => this.hitHazard());
     this.physics.add.overlap(this.player.sprite, this.world.orbs, (_p, orb) => {
-      const obj = orb as Phaser.GameObjects.GameObject;
-      if (!obj.active) return;
-      this.orbsCollected += 1;
-      obj.destroy();
+      this.collectOrb(orb as Phaser.GameObjects.GameObject);
     });
     this.physics.add.overlap(this.player.sprite, this.hunter.sprite, () => this.hitHazard(true));
 
@@ -134,11 +185,40 @@ export class PlayScene extends Phaser.Scene {
     if (this.ended) return;
 
     const controls = this.readControls();
-    this.player.update(this.time.now, controls);
+    const frame = this.player.update(this.time.now, controls);
     this.hunter.update(delta / 1000, this.player.x, this.player.y, this.player.vy);
+    this.backdrop.scroll(this.cameras.main.scrollX);
+    this.playerGlow.setPosition(this.player.x, this.player.y + 2);
+    this.playerGlow.setFlipX(this.player.sprite.flipX);
+    this.playerGlow.setAlpha(this.player.invulnerable ? 0.2 : 0.5 + Math.sin(this.time.now / 140) * 0.15);
+    this.playerGlow.setScale(this.player.sprite.scaleX * 1.05, this.player.sprite.scaleY * 1.05);
+
+    if (frame.jumped) audio.jump();
+    if (frame.dashed) {
+      audio.dash();
+      juice.burst(this.player.x, this.player.y, CYAN, 12, 200);
+      juice.dashTrail(true, this.player.sprite, CYAN);
+      this.trailingDash = true;
+    }
+    if (frame.landed && frame.landingVy > 140) {
+      audio.land();
+    }
+    if (this.trailingDash && !frame.dashing && !frame.dashed) {
+      juice.dashTrail(false);
+      this.trailingDash = false;
+    }
+
+    const dist = this.hunter.distanceTo(this.player.x, this.player.y);
+    if (dist < NEAR_MISS_PX && dist > 30 && !this.player.invulnerable && this.time.now > this.nearMissCool) {
+      this.nearMissCool = this.time.now + 420;
+      juice.shake(this, 70, 0.0032);
+      audio.nearMiss();
+    }
 
     if (this.player.sprite.y > GAME_HEIGHT + 50) {
       this.player.hurt(this.time.now, 0);
+      this.hurts += 1;
+      audio.hit();
       if (this.player.hp <= 0) {
         this.finish();
         return;
@@ -163,7 +243,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private score(): number {
-    return Math.floor(this.player.maxX / 8) + this.orbsCollected * ORB_SCORE;
+    return Math.floor(this.player.maxX / 8) + this.orbsCollected * ORB_SCORE + this.orbBonus;
   }
 
   private compactState(): CompactGameState {
@@ -179,9 +259,13 @@ export class PlayScene extends Phaser.Scene {
       hunter: {
         x: Math.round(this.hunter.x),
         aggression: Number(this.hunter.aggression.toFixed(2)),
+        dist: Math.round(this.player.x - this.hunter.x),
       },
       ahead: this.world.aheadEncoding(this.player.x),
       score: this.score(),
+      hurts: this.hurts,
+      lastEvent: this.lastEvent,
+      motif: this.motif,
     };
   }
 
@@ -212,11 +296,16 @@ export class PlayScene extends Phaser.Scene {
 
     if (!this.sys.isActive() || this.ended) return;
 
+    if (terrain && result.director) this.applyDirector(result.director);
+
     if (terrain && result.terrain.length) {
-      this.world.append(result.terrain, result.source);
+      this.world.append(result.terrain, result.source, result.director);
     }
-    if (hunter && result.hunterMove) {
-      this.applyHunter(result.hunterMove);
+    if (hunter && result.director?.hunter) {
+      this.applyHunter(result.director.hunter);
+    } else if (hunter && result.hunterMove) {
+      this.hunter.apply(result.hunterMove, this.player.x, this.player.y, this.player.vy, this.score());
+      this.hunterDue = this.time.now + HUNTER_TICK_MS;
     }
 
     if (terrain) this.terrainBusy = false;
@@ -224,29 +313,91 @@ export class PlayScene extends Phaser.Scene {
     this.emitHud();
   }
 
-  private applyHunter(move: HunterMove): void {
-    this.hunter.apply(move, this.player.x, this.player.y, this.player.vy, this.score());
+  private applyDirector(plan: DirectorPlan): void {
+    this.difficulty = plan.difficulty;
+    this.juiceCue = plan.juiceCue;
+    this.motif = plan.composition.motif;
+    this.lastEvent = plan.event;
+    this.backdrop.setMotif(this.motif);
+    juice.playCue(this, plan.juiceCue, this.player.x + 80, this.player.y);
+    audio.cue(plan.juiceCue);
+  }
+
+  private applyHunter(tactics: HunterTactics): void {
+    this.hunter.applyTactics(
+      tactics,
+      this.player.x,
+      this.player.y,
+      this.player.vy,
+      this.score(),
+      this.difficulty,
+    );
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
+  }
+
+  private collectOrb(obj: Phaser.GameObjects.GameObject): void {
+    if (!obj.active || this.ended) return;
+    const img = obj as Phaser.GameObjects.Image;
+    const x = img.x;
+    const y = img.y;
+    obj.destroy();
+
+    const now = this.time.now;
+    this.combo = now - this.lastOrbAt < COMBO_WINDOW_MS ? this.combo + 1 : 1;
+    this.lastOrbAt = now;
+    this.peakCombo = Math.max(this.peakCombo, this.combo);
+    this.orbsCollected += 1;
+    const bonus = (this.combo - 1) * COMBO_BONUS;
+    this.orbBonus += bonus;
+    const gained = ORB_SCORE + bonus;
+
+    juice.hitStop(this, 36, 0.28);
+    juice.burst(x, y, this.juiceCue === "rise" ? GOLD : CYAN, 16 + this.combo, 210);
+    juice.scorePop(this, x, y - 8, this.combo > 1 ? `x${this.combo} +${gained}` : `+${gained}`, this.combo > 2 ? GOLD : CYAN);
+    audio.orb(this.combo);
   }
 
   private hitHazard(fromHunter = false): void {
     if (this.ended) return;
     const knocked = this.player.hurt(this.time.now, fromHunter ? -240 : -120);
     if (!knocked) return;
-    this.cameras.main.flash(80, 255, 43, 214, false);
+    this.hurts += 1;
+    this.combo = 0;
+    juice.hitStop(this, 70, 0.14);
+    juice.shake(this, 140, 0.009);
+    juice.burst(this.player.x, this.player.y, MAGENTA, 18, 240);
+    this.cameras.main.flash(90, 255, 43, 214, false);
+    audio.hit();
     if (fromHunter) this.hunter.sprite.x -= 130;
     if (this.player.hp <= 0) this.finish();
   }
 
   private finish(): void {
-    if (this.ended) return;
-    this.ended = true;
+    if (this.ended || this.finishing) return;
+    this.finishing = true;
+    juice.dashTrail(false);
+    juice.hitStop(this, 140, 0.1);
+    juice.shake(this, 260, 0.016);
+    juice.burst(this.player.x, this.player.y, MAGENTA, 28, 280);
+    juice.burst(this.player.x, this.player.y, CYAN, 16, 200);
+    this.cameras.main.flash(160, 255, 43, 214, false);
+    audio.death();
     this.player.sprite.setVelocity(0, 0);
-    this.hooks.onGameOver({
-      score: this.score(),
-      distance: Math.floor(this.player.maxX / TILE),
-      callCount: this.hooks.jev.callCount,
-    });
+    window.setTimeout(() => {
+      if (!this.sys.isActive()) return;
+      this.cameras.main.fadeOut(320, 5, 5, 16);
+    }, 90);
+    window.setTimeout(() => {
+      if (this.ended) return;
+      this.ended = true;
+      juice.restoreTime(this);
+      this.hooks.onGameOver({
+        score: this.score(),
+        distance: Math.floor(this.player.maxX / TILE),
+        callCount: this.hooks.jev.callCount,
+        combo: this.peakCombo,
+      });
+    }, 420);
   }
 
   private emitHud(): void {
@@ -258,47 +409,12 @@ export class PlayScene extends Phaser.Scene {
       callCount: this.hooks.jev.callCount,
       source: this.hooks.jev.lastSource,
       warning: this.hooks.jev.warning,
-      hunterMove: this.hunter.move,
+      hunterMove: this.hunter.stance,
+      motif: this.motif,
+      event: this.lastEvent,
+      juiceCue: this.juiceCue,
+      difficulty: this.difficulty,
+      combo: this.time.now - this.lastOrbAt < COMBO_WINDOW_MS ? this.combo : 0,
     });
-  }
-
-  private paintBackdrop(): void {
-    const g = this.add.graphics();
-    g.fillGradientStyle(0x050510, 0x050510, 0x0b1024, 0x140818, 1);
-    g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    g.setScrollFactor(0);
-
-    for (let i = 0; i < 48; i += 1) {
-      const star = this.add.circle(
-        Phaser.Math.Between(0, GAME_WIDTH * 3),
-        Phaser.Math.Between(20, GAME_HEIGHT - 40),
-        Phaser.Math.FloatBetween(0.6, 1.8),
-        i % 3 === 0 ? 0xff2bd6 : 0x00f0ff,
-        0.45,
-      );
-      star.setScrollFactor(0.15 + (i % 4) * 0.05);
-    }
-
-    const fog = this.add.rectangle(0, GAME_HEIGHT - 70, GAME_WIDTH, 90, 0xff2bd6, 0.05).setOrigin(0, 0);
-    fog.setScrollFactor(0);
-  }
-
-  private makeTextures(): void {
-    const runner = this.add.graphics();
-    runner.fillStyle(0x00f0ff, 1);
-    runner.fillRoundedRect(2, 2, 24, 34, 7);
-    runner.fillStyle(0x050510, 1);
-    runner.fillRect(8, 10, 5, 5);
-    runner.fillRect(16, 10, 5, 5);
-    runner.generateTexture("runner", 28, 38);
-    runner.destroy();
-
-    const hunter = this.add.graphics();
-    hunter.fillStyle(0xff2bd6, 1);
-    hunter.fillTriangle(16, 2, 30, 30, 2, 30);
-    hunter.fillStyle(0x050510, 1);
-    hunter.fillTriangle(16, 10, 22, 24, 10, 24);
-    hunter.generateTexture("hunter", 32, 32);
-    hunter.destroy();
   }
 }

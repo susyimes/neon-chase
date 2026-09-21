@@ -17,4 +17,12 @@ export const TERRAIN_BATCH = 2;
 export const MAX_HP = 3;
 export const ORB_SCORE = 50;
 
+export const COYOTE_MS = 90;
+export const JUMP_BUFFER_MS = 110;
+export const DASH_BUFFER_MS = 80;
+export const COMBO_WINDOW_MS = 1700;
+export const COMBO_BONUS = 12;
+export const NEAR_MISS_PX = 76;
+export const MUTE_STORAGE_KEY = "neon-chase-mute";
+
 export const API_BASE = "/api";
