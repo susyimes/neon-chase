@@ -92,11 +92,14 @@ export function bindUi(controls: ControlState): {
     setOverlay(title, false);
     setOverlay(gameover, false);
     setOverlay(pause, false);
+    $("hud-score").textContent = "0";
+    $("hud-hp").textContent = "●●●";
     hud.classList.add("is-on");
   };
 
   const showGameOver = (result: RunResult): void => {
     flashVeil("magenta");
+    setOverlay(title, false);
     setOverlay(pause, false);
     $("go-score").textContent = String(result.score);
     $("go-distance").textContent = `${result.distance}m`;
@@ -155,6 +158,12 @@ export function bindUi(controls: ControlState): {
   };
   const onRetry = (fn: () => void): void => {
     $("btn-retry").addEventListener("click", fn);
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Enter" && overlayOn("overlay-gameover")) {
+        e.preventDefault();
+        fn();
+      }
+    });
   };
   const onTitle = (fn: () => void): void => {
     $("btn-title").addEventListener("click", fn);
