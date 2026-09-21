@@ -1,3 +1,10 @@
+import {
+  WALKABLE_PAD_AUTO_RUN,
+  WALKABLE_PAD_SECONDS as SHARED_PAD_SECONDS,
+  WALKABLE_PAD_TILE_PX,
+  WALKABLE_PAD_TILES as SHARED_PAD_TILES,
+} from "@shared/pads.ts";
+
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 export const TILE = 40;
@@ -21,6 +28,28 @@ export const HUNTERS_ENABLED = false;
  */
 export const SPIKE_SURFACE_KEEP = 1 / 3;
 export const SPIKE_NUB_KEEP = 1 / 3;
+/**
+ * Minimum walkable pad dwell at typical auto-run.
+ *   WALKABLE_PAD_PX    = AUTO_RUN × WALKABLE_PAD_SECONDS
+ *   WALKABLE_PAD_TILES = ceil(WALKABLE_PAD_PX / TILE)
+ * Keep AUTO_RUN / TILE equal to the twins in `shared/pads.ts`.
+ */
+export const WALKABLE_PAD_SECONDS = SHARED_PAD_SECONDS;
+export const WALKABLE_PAD_PX = AUTO_RUN * WALKABLE_PAD_SECONDS;
+export const WALKABLE_PAD_TILES = Math.max(
+  SHARED_PAD_TILES,
+  Math.ceil(WALKABLE_PAD_PX / TILE),
+);
+/** `?pads=1` paints tile-count + dwell labels on each built pad (playtest). */
+export const DEBUG_PAD_LABELS =
+  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("pads");
+
+if (AUTO_RUN !== WALKABLE_PAD_AUTO_RUN || TILE !== WALKABLE_PAD_TILE_PX) {
+  console.warn(
+    `[pads] AUTO_RUN/TILE (${AUTO_RUN}/${TILE}) drifted from shared/pads.ts ` +
+      `(${WALKABLE_PAD_AUTO_RUN}/${WALKABLE_PAD_TILE_PX}). Client clamp still uses local speed.`,
+  );
+}
 export const JEV_TIMEOUT_MS = 800;
 export const BUFFER_SCREENS = 2;
 export const TERRAIN_BATCH = 2;

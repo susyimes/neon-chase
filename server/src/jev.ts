@@ -1,4 +1,5 @@
 import { safeDirector } from "../../shared/defaults.ts";
+import { LEGACY_WIDTH_TO_WALKABLE, WALKABLE_PAD_TILES } from "../../shared/pads.ts";
 import type {
   DecideRequest,
   DecideResponse,
@@ -146,7 +147,7 @@ function parseTerrain(
     const p = i === 0 ? "" : `s${i}_`;
     out.push({
       surface: pick(asChoice(answers[`${p}next_surface`]), SURFACES, "solid"),
-      width: pickNum(asChoice(answers[`${p}width`]), WIDTHS, 5),
+      width: parseWalkableWidth(asChoice(answers[`${p}width`])),
       gap: pickNum(asChoice(answers[`${p}gap`]), GAPS, 0),
       height: pickNum(asChoice(answers[`${p}height`]), HEIGHTS, 5),
     });
@@ -210,6 +211,14 @@ function pickNum<T extends number>(
 ): T {
   const n = value === undefined ? Number.NaN : Number(value);
   return (allowed as readonly number[]).includes(n) ? (n as T) : fallback;
+}
+
+/** Accept 6/8/10, and remap legacy 2/3/5 stubs onto the 1-second scale. */
+function parseWalkableWidth(value: string | undefined): number {
+  const n = value === undefined ? Number.NaN : Number(value);
+  if ((WIDTHS as readonly number[]).includes(n)) return n;
+  if (n in LEGACY_WIDTH_TO_WALKABLE) return LEGACY_WIDTH_TO_WALKABLE[n];
+  return WALKABLE_PAD_TILES;
 }
 
 function clamp(n: number, lo: number, hi: number): number {
