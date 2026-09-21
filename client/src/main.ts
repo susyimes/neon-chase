@@ -49,14 +49,14 @@ function startRun(): void {
   clearControls();
   ui.showPlay();
   const scene = game.scene.getScene(PlayScene.KEY);
-  if (scene) {
-    juice.restoreTime(scene);
-    scene.cameras?.main?.resetFX();
+  if (scene) juice.restoreTime(scene);
+  const running = Boolean(scene && (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)));
+  if (running && scene) {
+    scene.cameras.main.resetFX();
+    scene.scene.restart(hooks);
+  } else {
+    game.scene.start(PlayScene.KEY, hooks);
   }
-  if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
-    game.scene.stop(PlayScene.KEY);
-  }
-  game.scene.start(PlayScene.KEY, hooks);
   window.setTimeout(() => {
     starting = false;
   }, 250);
