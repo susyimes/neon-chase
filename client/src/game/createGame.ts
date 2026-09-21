@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../config.ts";
+import { makeGameTextures } from "./fx/textures.ts";
+import { Backdrop } from "./world/Backdrop.ts";
 import { PlayScene } from "./scenes/PlayScene.ts";
 
 class BootScene extends Phaser.Scene {
@@ -9,6 +11,10 @@ class BootScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(0x050510);
+    makeGameTextures(this);
+    const bg = new Backdrop(this);
+    bg.setMotif("neon_alley");
+    bg.scroll(40);
   }
 }
 
@@ -19,7 +25,9 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     backgroundColor: "#050510",
+    antialias: true,
     pixelArt: false,
+    roundPixels: false,
     physics: {
       default: "arcade",
       arcade: {
