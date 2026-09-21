@@ -11,6 +11,7 @@ import {
   BUFFER_SCREENS,
   COMBO_BONUS,
   COMBO_WINDOW_MS,
+  DEBUG_PAD_LABELS,
   GAME_HEIGHT,
   GRAVITY,
   HUNTERS_ENABLED,
@@ -140,6 +141,18 @@ export class PlayScene extends Phaser.Scene {
 
     this.world = new TerrainWorld(this);
     this.world.append(safeSpecs(8), "fallback");
+    if (DEBUG_PAD_LABELS) {
+      // Authored as the old 2–3 tile stubs so playtest proves the 1s clamp.
+      this.world.append(
+        [
+          { surface: "ledge", width: 2, gap: 1, height: 6 },
+          { surface: "ledge", width: 2, gap: 1, height: 7 },
+          { surface: "ledge", width: 3, gap: 1, height: 5 },
+          { surface: "solid", width: 2, gap: 2, height: 5 },
+        ],
+        "fallback",
+      );
+    }
 
     const spawn = this.world.lastSafeX();
     const playerSprite = this.physics.add.sprite(spawn.x, spawn.y, "runner");
