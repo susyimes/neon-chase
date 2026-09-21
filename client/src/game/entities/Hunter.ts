@@ -34,7 +34,8 @@ export class Hunter {
     this.glow = glow;
     glow.setDepth(5);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    glow.setAlpha(0.55);
+    glow.setScale(1.35);
+    glow.setAlpha(0.7);
   }
 
   get x(): number {

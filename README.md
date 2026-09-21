@@ -4,7 +4,7 @@ Endless side-scrolling runner. You run, jump, and dash. **TypeSafe Jev** (System
 
 无尽横版跑酷。玩家奔跑、跳跃、冲刺。**TypeSafe Jev**（System One）不生成文案或美术，只从固定选项里返回结构化 Choice / Score / Noul，用来铺前方地形、触发可见事件并驱动追猎 AI。
 
-Polish pass (juice, lighting, audio, UI) follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF): hierarchy, feedback, and intentional art direction — not more random features.
+Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF) (BV1q843z1EgF): constrained cyan/magenta grade, shared L-corner chrome on title/HUD/game-over, cool fog vs warm neon, parallax city, quiet Jev whisper, distinct confirm/back/tick/hold SFX, faded overlay transitions, contextual particles, land/hurt squash, and one geometric-neon direction — not more features.
 
 ## Play / 怎么玩
 

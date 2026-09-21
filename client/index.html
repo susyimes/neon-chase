@@ -12,75 +12,81 @@
         <div id="game-root"></div>
         <div id="fx-veil" aria-hidden="true"></div>
 
-        <button id="btn-mute" type="button" class="icon-btn" aria-pressed="false" title="Mute audio">LIVE</button>
+        <button id="btn-mute" type="button" class="icon-btn chrome-btn" data-sfx="tick" aria-pressed="false" title="Mute audio">LIVE</button>
 
-        <div id="hud" hidden>
+        <div id="hud">
           <div class="hud-top">
-            <div class="stat score">
+            <div class="chip score">
               <span class="label">SCORE</span>
               <span id="hud-score">0</span>
             </div>
-            <div id="hud-combo" class="combo" hidden>CHAIN <b id="hud-combo-n">1</b></div>
-            <div class="stat hp-wrap">
+            <div id="hud-combo" class="chip combo" hidden>CHAIN <b id="hud-combo-n">1</b></div>
+            <div class="chip hp-wrap">
               <span class="label">SIGNAL</span>
               <span id="hud-hp" class="hp">●●●</span>
             </div>
           </div>
-          <p id="hud-jev" class="jev-line">Jev…</p>
-          <div id="hud-beat" hidden></div>
-          <div id="hud-warning" hidden></div>
+          <p id="hud-jev" class="whisper">Jev…</p>
+          <div id="hud-beat" class="chip beat" hidden></div>
+          <p id="hud-warning" class="whisper warn" hidden></p>
         </div>
 
-        <div id="overlay-title" class="overlay is-on">
-          <p class="kicker">SYSTEM ONE · JEV DIRECTS THE NIGHT</p>
-          <h1>NEON CHASE</h1>
-          <p class="subtitle">霓虹追影</p>
-          <p class="blurb">
-            The city is a live wire. You are the spark. Jev does not write the story —
-            it chooses the next street, the hunter’s stance, the beat of the neon.
-            城市不眠，猎影不眨。收集青辉，别让洋红影子合拢。
-          </p>
-          <ul class="controls">
-            <li><kbd>A</kbd><kbd>D</kbd> / arrows — run</li>
-            <li><kbd>W</kbd> / <kbd>Space</kbd> — jump <span class="hint">coyote + buffer</span></li>
-            <li><kbd>Shift</kbd> — dash</li>
-            <li><kbd>Esc</kbd> — pause</li>
-          </ul>
-          <button id="btn-play" type="button">ENTER THE SPINE</button>
-          <p id="title-status" class="status">Checking Jev proxy…</p>
-        </div>
-
-        <div id="overlay-gameover" class="overlay" hidden>
-          <p class="kicker">SIGNAL LOST</p>
-          <h1>GAME OVER</h1>
-          <p class="subtitle">追影终止</p>
-          <dl class="results">
-            <div><dt>Score</dt><dd id="go-score">0</dd></div>
-            <div><dt>Distance</dt><dd id="go-distance">0</dd></div>
-            <div><dt>Peak chain</dt><dd id="go-combo">—</dd></div>
-            <div><dt>Jev calls</dt><dd id="go-calls">0</dd></div>
-          </dl>
-          <div class="row-actions">
-            <button id="btn-retry" type="button">AGAIN</button>
-            <button id="btn-title" class="ghost" type="button">TITLE</button>
+        <div id="overlay-title" class="overlay chrome is-on">
+          <div class="chrome-inner">
+            <p class="kicker">SYSTEM ONE · JEV DIRECTS THE NIGHT</p>
+            <h1>NEON CHASE</h1>
+            <p class="subtitle">霓虹追影</p>
+            <p class="blurb">
+              The city is a live wire. You are the spark. Jev does not write the story —
+              it chooses the next street, the hunter’s stance, the beat of the neon.
+              城市不眠，猎影不眨。收集青辉，别让洋红影子合拢。
+            </p>
+            <ul class="controls">
+              <li><kbd>A</kbd><kbd>D</kbd> / arrows — run</li>
+              <li><kbd>W</kbd> / <kbd>Space</kbd> — jump <span class="hint">coyote + buffer</span></li>
+              <li><kbd>Shift</kbd> — dash</li>
+              <li><kbd>Esc</kbd> — pause</li>
+            </ul>
+            <button id="btn-play" type="button" class="chrome-btn" data-sfx="confirm">ENTER THE SPINE</button>
+            <p id="title-status" class="status">Checking Jev proxy…</p>
           </div>
         </div>
 
-        <div id="overlay-pause" class="overlay overlay-center" hidden>
-          <p class="kicker">HOLD</p>
-          <h1>PAUSED</h1>
-          <p class="subtitle">影停</p>
-          <div class="row-actions">
-            <button id="btn-resume" type="button">RESUME</button>
-            <button id="btn-pause-title" class="ghost" type="button">TITLE</button>
+        <div id="overlay-gameover" class="overlay chrome">
+          <div class="chrome-inner">
+            <p class="kicker">SIGNAL LOST</p>
+            <h1>GAME OVER</h1>
+            <p class="subtitle">追影终止</p>
+            <dl class="results">
+              <div><dt>Score</dt><dd id="go-score">0</dd></div>
+              <div><dt>Distance</dt><dd id="go-distance">0</dd></div>
+              <div><dt>Peak chain</dt><dd id="go-combo">—</dd></div>
+              <div><dt>Jev calls</dt><dd id="go-calls">0</dd></div>
+            </dl>
+            <div class="row-actions">
+              <button id="btn-retry" type="button" class="chrome-btn" data-sfx="confirm">AGAIN</button>
+              <button id="btn-title" class="chrome-btn ghost" type="button" data-sfx="back">TITLE</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="overlay-pause" class="overlay chrome overlay-center">
+          <div class="chrome-inner">
+            <p class="kicker">HOLD</p>
+            <h1>PAUSED</h1>
+            <p class="subtitle">影停</p>
+            <div class="row-actions">
+              <button id="btn-resume" type="button" class="chrome-btn" data-sfx="confirm">RESUME</button>
+              <button id="btn-pause-title" class="chrome-btn ghost" type="button" data-sfx="back">TITLE</button>
+            </div>
           </div>
         </div>
 
         <div id="touch" hidden>
-          <button type="button" data-touch="left">◀</button>
-          <button type="button" data-touch="right">▶</button>
-          <button type="button" data-touch="jump">JUMP</button>
-          <button type="button" data-touch="dash">DASH</button>
+          <button type="button" class="chrome-btn" data-touch="left">◀</button>
+          <button type="button" class="chrome-btn" data-touch="right">▶</button>
+          <button type="button" class="chrome-btn" data-touch="jump">JUMP</button>
+          <button type="button" class="chrome-btn" data-touch="dash">DASH</button>
         </div>
       </div>
     </div>

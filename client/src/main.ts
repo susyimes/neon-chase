@@ -34,7 +34,7 @@ async function armAudio(): Promise<void> {
 
 function startRun(): void {
   void armAudio();
-  audio.click();
+  audio.confirm();
   paused = false;
   ui.showPlay();
   if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
@@ -46,7 +46,7 @@ function startRun(): void {
 }
 
 function toTitle(): void {
-  audio.click();
+  audio.back();
   paused = false;
   if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
     const scene = game.scene.getScene(PlayScene.KEY);
@@ -59,20 +59,18 @@ function toTitle(): void {
 
 function setPaused(next: boolean): void {
   if (!game.scene.isActive(PlayScene.KEY) && !game.scene.isPaused(PlayScene.KEY)) return;
-  const title = document.getElementById("overlay-title");
-  const over = document.getElementById("overlay-gameover");
-  if (title && !title.hidden) return;
-  if (over && !over.hidden) return;
+  if (ui.overlayOn("overlay-title") || ui.overlayOn("overlay-gameover")) return;
   paused = next;
   const scene = game.scene.getScene(PlayScene.KEY);
   if (next) {
     if (scene) juice.restoreTime(scene);
     game.scene.pause(PlayScene.KEY);
     ui.showPause(true);
-    audio.duck(800, 0.4);
+    audio.hold();
   } else {
     game.scene.resume(PlayScene.KEY);
     ui.showPause(false);
+    audio.confirm();
   }
 }
 
@@ -81,10 +79,7 @@ const lastStatus = { text: "Checking Jev proxy…", kind: "ok" as "ok" | "warn" 
 ui.onPlay(startRun);
 ui.onRetry(startRun);
 ui.onTitle(toTitle);
-ui.onResume(() => {
-  audio.click();
-  setPaused(false);
-});
+ui.onResume(() => setPaused(false));
 ui.onPauseTitle(toTitle);
 
 window.addEventListener("keydown", (e) => {
@@ -96,21 +91,22 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.code === "KeyM") {
     audio.toggleMute();
+    audio.tick();
   }
 });
 
 void jev.health().then((health) => {
   if (!health) {
-    lastStatus.text = "Proxy offline — game still runs with local safe terrain.";
+    lastStatus.text = "Proxy offline — local terrain.";
     lastStatus.kind = "warn";
   } else if (!health.jevConfigured) {
-    lastStatus.text = "No TYPESAFE_API_KEY — playing with safe fallback terrain.";
+    lastStatus.text = "No key — local terrain. Jev stays on the server.";
     lastStatus.kind = "warn";
   } else {
-    lastStatus.text = `Jev proxy ready · ${health.model}`;
+    lastStatus.text = `Jev ready · ${health.model}`;
     lastStatus.kind = "ok";
   }
-  if (!document.getElementById("overlay-title")?.hidden) {
+  if (ui.overlayOn("overlay-title")) {
     ui.showTitle(lastStatus.text, lastStatus.kind);
   }
 });

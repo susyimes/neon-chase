@@ -3,14 +3,15 @@
   --bg: #050510;
   --cyan: #00f0ff;
   --magenta: #ff2bd6;
-  --gold: #ffcc55;
   --ink: #e8f6ff;
-  --muted: #7f8aa8;
-  --panel: rgba(6, 8, 20, 0.78);
-  --danger: #ff5c8a;
+  --muted: #7a849c;
+  --panel: rgba(6, 8, 20, 0.72);
   --font-display: "Noto Sans", "Noto Sans SC", "DejaVu Sans", "Segoe UI", "PingFang SC", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --space: 8px;
+  --chrome: var(--cyan);
   font-family: var(--font-display);
+  font-size: 16px;
 }
 
 * {
@@ -22,8 +23,8 @@ body {
   margin: 0;
   min-height: 100%;
   background:
-    radial-gradient(1200px 600px at 20% 0%, rgba(0, 240, 255, 0.1), transparent 50%),
-    radial-gradient(900px 500px at 90% 10%, rgba(255, 43, 214, 0.1), transparent 45%),
+    radial-gradient(1100px 520px at 18% 0%, rgba(0, 240, 255, 0.08), transparent 52%),
+    radial-gradient(800px 420px at 92% 8%, rgba(255, 43, 214, 0.07), transparent 48%),
     var(--bg);
   color: var(--ink);
 }
@@ -45,10 +46,10 @@ body {
   width: 100%;
   aspect-ratio: 16 / 9;
   max-height: min(86dvh, 720px);
-  border: 1px solid rgba(0, 240, 255, 0.28);
+  border: 1px solid rgba(0, 240, 255, 0.32);
   box-shadow:
-    0 0 0 1px rgba(255, 43, 214, 0.12),
-    0 0 48px rgba(0, 240, 255, 0.1),
+    0 0 0 1px rgba(255, 43, 214, 0.1),
+    0 0 40px rgba(0, 240, 255, 0.08),
     inset 0 0 80px rgba(0, 0, 0, 0.35);
   background: #050510;
   overflow: hidden;
@@ -60,7 +61,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 5;
-  background: radial-gradient(ellipse at center, transparent 46%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse at center, transparent 48%, rgba(0, 0, 0, 0.58) 100%);
 }
 
 #frame::after {
@@ -71,7 +72,7 @@ body {
   background: repeating-linear-gradient(
     to bottom,
     transparent 0 3px,
-    rgba(0, 0, 0, 0.08) 3px 4px
+    rgba(0, 0, 0, 0.07) 3px 4px
   );
   z-index: 5;
 }
@@ -92,31 +93,89 @@ body {
 }
 
 #fx-veil.flash-cyan {
-  animation: veilCyan 0.38s ease-out;
+  animation: veilCyan 0.4s ease-out;
 }
 
 #fx-veil.flash-magenta {
-  animation: veilMagenta 0.42s ease-out;
+  animation: veilMagenta 0.44s ease-out;
 }
 
 @keyframes veilCyan {
-  0% { opacity: 0.7; background: #00f0ff; mix-blend-mode: screen; }
-  30% { opacity: 0.25; box-shadow: inset 8px 0 0 rgba(255, 43, 214, 0.45); }
+  0% { opacity: 0.65; background: #00f0ff; mix-blend-mode: screen; }
+  28% { opacity: 0.22; box-shadow: inset 10px 0 0 rgba(255, 43, 214, 0.4); }
   100% { opacity: 0; }
 }
 
 @keyframes veilMagenta {
-  0% { opacity: 0.75; background: #ff2bd6; mix-blend-mode: screen; }
-  40% { opacity: 0.2; transform: translateX(3px); }
+  0% {
+    opacity: 0.45;
+    background: linear-gradient(90deg, rgba(255, 43, 214, 0.55), transparent 40%, rgba(255, 43, 214, 0.25));
+    mix-blend-mode: screen;
+  }
+  35% { opacity: 0.16; transform: translateX(4px); }
   100% { opacity: 0; transform: none; }
+}
+
+/* Shared L-corners — title, pause, game-over, HUD chips, buttons */
+.chrome-inner,
+.chip,
+.chrome-btn {
+  position: relative;
+}
+
+.chrome-inner::before,
+.chip::before,
+.chrome-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--chrome), var(--chrome)) top left / 14px 2px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top left / 2px 14px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top right / 14px 2px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top right / 2px 14px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom left / 14px 2px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom left / 2px 14px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom right / 14px 2px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom right / 2px 14px no-repeat;
+}
+
+.chip::before,
+.chrome-btn::before {
+  background:
+    linear-gradient(var(--chrome), var(--chrome)) top left / 8px 1px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top left / 1px 8px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top right / 8px 1px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) top right / 1px 8px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom left / 8px 1px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom left / 1px 8px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom right / 8px 1px no-repeat,
+    linear-gradient(var(--chrome), var(--chrome)) bottom right / 1px 8px no-repeat;
+}
+
+.ghost {
+  --chrome: var(--magenta);
+}
+
+.hp-wrap {
+  --chrome: var(--magenta);
 }
 
 #hud {
   position: absolute;
   inset: 0 0 auto 0;
   z-index: 6;
-  padding: 14px 16px 0;
+  padding: 16px 16px 0;
   pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+#hud.is-on {
+  opacity: 1;
+  transform: none;
 }
 
 .hud-top {
@@ -127,18 +186,40 @@ body {
   padding-right: 72px;
 }
 
-.stat {
-  display: flex;
-  flex-direction: column;
-  min-width: 72px;
+.chip {
+  min-width: 88px;
+  padding: 8px 12px 6px;
+  background: rgba(5, 8, 18, 0.45);
 }
 
-.stat .label,
+.chip .label,
 .kicker {
+  display: block;
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
+  line-height: 1.2;
   color: var(--cyan);
   text-transform: uppercase;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  padding-bottom: 10px;
+}
+
+.kicker::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 2px;
+  margin-top: 8px;
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+}
+
+.overlay-center .kicker::after {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 #hud-score {
@@ -148,7 +229,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-shadow: 0 0 14px rgba(0, 240, 255, 0.55);
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 #hud-score.pop {
@@ -156,63 +237,44 @@ body {
 }
 
 @keyframes scorePop {
-  0% { transform: scale(1.18); color: #fff; }
+  0% { transform: scale(1.14); color: #fff; }
   100% { transform: scale(1); }
 }
 
 .hp {
   color: var(--magenta);
-  letter-spacing: 0.28em;
+  letter-spacing: 0.24em;
   font-size: 18px;
-  text-shadow: 0 0 12px rgba(255, 43, 214, 0.6);
+  text-shadow: 0 0 12px rgba(255, 43, 214, 0.55);
 }
 
 .combo {
   align-self: center;
-  padding: 4px 12px;
-  border: 1px solid rgba(255, 204, 85, 0.55);
-  color: var(--gold);
-  letter-spacing: 0.18em;
-  font-size: 12px;
-  text-shadow: 0 0 10px rgba(255, 204, 85, 0.55);
-  animation: comboPulse 0.7s ease-in-out infinite alternate;
+  color: var(--cyan);
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.45);
 }
 
-@keyframes comboPulse {
-  from { box-shadow: 0 0 0 rgba(255, 204, 85, 0); }
-  to { box-shadow: 0 0 16px rgba(255, 204, 85, 0.35); }
-}
-
-.jev-line {
+.whisper {
   margin: 8px 0 0;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  color: rgba(232, 246, 255, 0.55);
-  text-transform: lowercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: rgba(232, 246, 255, 0.38);
+}
+
+.whisper.warn {
+  color: rgba(255, 180, 220, 0.55);
 }
 
 #hud-beat {
-  margin-top: 10px;
-  width: fit-content;
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 43, 214, 0.55);
-  color: var(--magenta);
-  letter-spacing: 0.28em;
-  font-size: 11px;
-  background: rgba(255, 43, 214, 0.1);
-  text-shadow: 0 0 10px rgba(255, 43, 214, 0.5);
-}
-
-#hud-warning {
   margin-top: 8px;
-  padding: 6px 8px;
   width: fit-content;
-  max-width: 100%;
-  background: rgba(255, 43, 214, 0.12);
-  border: 1px solid rgba(255, 43, 214, 0.4);
-  color: #ffd0ec;
-  font-size: 12px;
+  --chrome: var(--magenta);
+  color: var(--magenta);
+  letter-spacing: 0.22em;
+  font-size: 10px;
 }
 
 .icon-btn {
@@ -221,13 +283,13 @@ body {
   right: 12px;
   z-index: 8;
   min-width: 56px;
-  padding: 6px 10px;
-  font-size: 11px;
+  padding: 7px 10px;
+  font-size: 10px;
   letter-spacing: 0.16em;
 }
 
 .icon-btn.is-muted {
-  border-color: var(--magenta);
+  --chrome: var(--magenta);
   color: var(--magenta);
 }
 
@@ -239,50 +301,58 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  padding: clamp(20px, 5vw, 56px);
-  background: linear-gradient(90deg, rgba(5, 5, 16, 0.88) 0%, rgba(8, 6, 22, 0.62) 58%, rgba(5, 5, 16, 0.18));
+  padding: clamp(20px, 5vw, 48px);
+  background: linear-gradient(90deg, rgba(5, 5, 16, 0.9) 0%, rgba(8, 6, 22, 0.58) 58%, rgba(5, 5, 16, 0.16));
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
 }
 
 .overlay.is-on {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: none;
 }
 
 .overlay-center {
   align-items: center;
   text-align: center;
-  background: rgba(5, 5, 16, 0.72);
+  background: rgba(5, 5, 16, 0.62);
 }
 
-.overlay[hidden],
-#hud[hidden],
+.chrome-inner {
+  padding: 20px 22px 18px;
+  max-width: 40rem;
+}
+
 #touch[hidden] {
   display: none !important;
 }
 
 h1 {
-  margin: 6px 0 0;
-  font-size: clamp(36px, 8vw, 72px);
-  letter-spacing: 0.1em;
-  line-height: 0.92;
+  margin: 0;
+  font-size: clamp(36px, 7.4vw, 68px);
+  letter-spacing: 0.08em;
+  line-height: 0.94;
   color: var(--cyan);
   text-shadow:
-    0 0 16px rgba(0, 240, 255, 0.75),
-    3px 0 0 rgba(255, 43, 214, 0.45);
+    0 0 16px rgba(0, 240, 255, 0.7),
+    2px 0 0 rgba(255, 43, 214, 0.35);
 }
 
 .subtitle {
-  margin: 6px 0 16px;
+  margin: 8px 0 16px;
   color: var(--magenta);
-  letter-spacing: 0.46em;
+  letter-spacing: 0.28em;
   font-size: 13px;
 }
 
 .blurb {
   max-width: 36rem;
+  margin: 0 0 16px;
   color: var(--muted);
   line-height: 1.55;
   font-size: 15px;
@@ -290,20 +360,19 @@ h1 {
 
 .controls {
   padding: 0;
-  margin: 0 0 22px;
+  margin: 0 0 20px;
   list-style: none;
   color: var(--ink);
   font-size: 14px;
 }
 
 .controls li {
-  margin: 5px 0;
+  margin: 6px 0;
 }
 
 .hint {
   color: var(--muted);
   font-size: 12px;
-  letter-spacing: 0.04em;
 }
 
 kbd {
@@ -311,50 +380,51 @@ kbd {
   min-width: 1.6em;
   margin-right: 4px;
   padding: 1px 6px;
-  border: 1px solid rgba(0, 240, 255, 0.4);
+  border: 1px solid rgba(0, 240, 255, 0.35);
   color: var(--cyan);
   font-size: 12px;
-  box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
 button {
   appearance: none;
-  border: 1px solid var(--cyan);
-  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  background: rgba(0, 240, 255, 0.07);
   color: var(--cyan);
-  padding: 10px 22px;
-  letter-spacing: 0.16em;
+  padding: 10px 20px;
+  letter-spacing: 0.14em;
   cursor: pointer;
   font: inherit;
+  font-size: 13px;
   transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 button:hover,
 button:focus-visible {
-  background: rgba(0, 240, 255, 0.2);
-  box-shadow: 0 0 22px rgba(0, 240, 255, 0.3);
+  background: rgba(0, 240, 255, 0.18);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.22);
 }
 
 button.ghost {
-  border-color: var(--magenta);
+  border-color: rgba(255, 43, 214, 0.4);
   color: var(--magenta);
   background: transparent;
 }
 
 button.ghost:hover,
 button.ghost:focus-visible {
-  background: rgba(255, 43, 214, 0.12);
-  box-shadow: 0 0 22px rgba(255, 43, 214, 0.25);
+  background: rgba(255, 43, 214, 0.1);
+  box-shadow: 0 0 18px rgba(255, 43, 214, 0.2);
 }
 
 .status {
-  margin-top: 14px;
+  margin: 14px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .status.warn {
-  color: var(--danger);
+  color: #ff8ab8;
 }
 
 .status.ok {
@@ -365,11 +435,11 @@ button.ghost:focus-visible {
   display: grid;
   grid-template-columns: repeat(4, minmax(72px, 1fr));
   gap: 16px;
-  margin: 8px 0 24px;
+  margin: 4px 0 20px;
 }
 
 .results dt {
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.16em;
   color: var(--muted);
   text-transform: uppercase;
@@ -377,10 +447,10 @@ button.ghost:focus-visible {
 
 .results dd {
   margin: 4px 0 0;
-  font-size: 26px;
+  font-size: 24px;
   color: var(--cyan);
   font-family: var(--font-mono);
-  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
 }
 
 .row-actions {
@@ -440,6 +510,10 @@ button.ghost:focus-visible {
 
   #hud-score {
     font-size: 22px;
+  }
+
+  .chrome-inner {
+    padding: 14px 12px;
   }
 }
 

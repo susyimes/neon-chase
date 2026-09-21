@@ -81,6 +81,36 @@ export class AudioBus {
     this.blip(1400, 0.04, "sine", 0.18);
   }
 
+  /** Primary confirm — Play / Again. Distinct from back/tick. */
+  confirm(): void {
+    this.blip(520, 0.06, "square", 0.16);
+    this.blip(780, 0.08, "sine", 0.2, 0.05);
+  }
+
+  /** Leave / Title. */
+  back(): void {
+    this.sweep(420, 180, 0.1, "triangle", 0.16);
+  }
+
+  /** Mute chip. */
+  tick(): void {
+    this.blip(1900, 0.03, "sine", 0.12);
+  }
+
+  /** Pause in. */
+  hold(): void {
+    this.blip(240, 0.08, "triangle", 0.14);
+    this.duck(500, 0.55);
+  }
+
+  ui(kind: "confirm" | "back" | "tick" | "hold" | "click"): void {
+    if (kind === "confirm") this.confirm();
+    else if (kind === "back") this.back();
+    else if (kind === "tick") this.tick();
+    else if (kind === "hold") this.hold();
+    else this.click();
+  }
+
   jump(): void {
     this.sweep(190, 430, 0.09, "square", 0.16);
   }

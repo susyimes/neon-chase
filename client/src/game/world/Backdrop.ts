@@ -16,20 +16,20 @@ export class Backdrop {
     this.sky = scene.add.graphics().setScrollFactor(0).setDepth(0);
     this.paintSky();
 
-    for (let i = 0; i < 70; i += 1) {
+    for (let i = 0; i < 56; i += 1) {
       const star = scene.add.circle(
         Phaser.Math.Between(0, GAME_WIDTH),
-        Phaser.Math.Between(8, GAME_HEIGHT - 160),
-        Phaser.Math.FloatBetween(0.5, 1.6),
-        i % 4 === 0 ? 0xff2bd6 : 0x00f0ff,
-        0.4,
+        Phaser.Math.Between(8, GAME_HEIGHT - 180),
+        Phaser.Math.FloatBetween(0.4, 1.3),
+        i % 7 === 0 ? 0xff2bd6 : 0x8ad8ff,
+        0.28,
       );
       star.setScrollFactor(0);
       star.setDepth(0);
       scene.tweens.add({
         targets: star,
-        alpha: { from: 0.15, to: 0.7 },
-        duration: 1400 + (i % 7) * 220,
+        alpha: { from: 0.1, to: 0.4 },
+        duration: 1600 + (i % 7) * 220,
         yoyo: true,
         repeat: -1,
       });
@@ -47,28 +47,35 @@ export class Backdrop {
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(1)
-      .setAlpha(1);
+      .setAlpha(0.62);
     this.mid = scene.add
       .tileSprite(0, GAME_HEIGHT + 4, GAME_WIDTH, 220, "sky-mid")
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(1)
-      .setAlpha(0.95);
+      .setAlpha(0.72);
     this.near = scene.add
       .tileSprite(0, GAME_HEIGHT + 16, GAME_WIDTH, 160, "sky-near")
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(2)
-      .setAlpha(0.88);
+      .setAlpha(0.78);
+
+    scene.add
+      .rectangle(0, GAME_HEIGHT - 210, GAME_WIDTH, 90, 0x3a6cff, 0.06)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(2)
+      .setBlendMode(Phaser.BlendModes.ADD);
 
     this.fog = scene.add
-      .rectangle(0, GAME_HEIGHT - 86, GAME_WIDTH, 86, 0xff2bd6, 0.05)
+      .rectangle(0, GAME_HEIGHT - 80, GAME_WIDTH, 80, 0xff2bd6, 0.06)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(2)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.haze = scene.add
-      .rectangle(0, 0, GAME_WIDTH, 64, 0x00f0ff, 0.045)
+      .rectangle(0, 0, GAME_WIDTH, 64, 0x7ad7ff, 0.035)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(2)
