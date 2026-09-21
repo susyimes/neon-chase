@@ -211,14 +211,16 @@ export class PlayScene extends Phaser.Scene {
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
     this.pullDecisions(true, HUNTERS_ENABLED);
     this.emitHud();
-    this.exposePadDebug();
+    this.exposeDebugApi();
   }
 
-  private exposePadDebug(): void {
-    if (!DEBUG_PAD_LABELS) return;
+  private exposeDebugApi(): void {
     const scene = this;
-    (window as Window & { __neonChase?: unknown }).__neonChase = {
-      snapshot() {
+    const api: { die: () => void; snapshot?: () => unknown } = {
+      die: () => scene.handlePit(),
+    };
+    if (DEBUG_PAD_LABELS) {
+      api.snapshot = () => {
         const vx = scene.player.vx || AUTO_RUN;
         return {
           player: {
@@ -242,8 +244,9 @@ export class PlayScene extends Phaser.Scene {
               };
             }),
         };
-      },
-    };
+      };
+    }
+    (window as Window & { __neonChase?: unknown }).__neonChase = api;
   }
 
   update(_time: number, delta: number): void {
