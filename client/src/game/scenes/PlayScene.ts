@@ -13,6 +13,7 @@ import {
   COMBO_WINDOW_MS,
   GAME_HEIGHT,
   GRAVITY,
+  HUNTERS_ENABLED,
   HUNTER_TICK_MS,
   MAX_HP,
   NEAR_MISS_PX,
@@ -22,6 +23,7 @@ import {
 } from "../../config.ts";
 import { audio } from "../../audio/AudioBus.ts";
 import { CYAN, GOLD, MAGENTA } from "../../palette.ts";
+import { DISABLED_HUNTER_STATE } from "@shared/defaults.ts";
 import type { ControlState } from "../entities/Player.ts";
 import { Hunter } from "../entities/Hunter.ts";
 import { Player } from "../entities/Player.ts";
@@ -68,7 +70,7 @@ export class PlayScene extends Phaser.Scene {
   private hooks!: PlayHooks;
   private world!: TerrainWorld;
   private player!: Player;
-  private hunter!: Hunter;
+  private hunter: Hunter | null = null;
   private backdrop!: Backdrop;
   private playerGlow!: Phaser.GameObjects.Image;
   private keys!: {
@@ -110,6 +112,8 @@ export class PlayScene extends Phaser.Scene {
   create(): void {
     this.ended = false;
     this.finishing = false;
+    this.hunter = null;
+    this.hunterBusy = false;
     this.orbsCollected = 0;
     this.orbBonus = 0;
     this.combo = 0;
@@ -146,18 +150,24 @@ export class PlayScene extends Phaser.Scene {
     this.playerGlow.setDepth(4);
     this.playerGlow.setAlpha(0.55);
 
-    const hunterSprite = this.physics.add.sprite(spawn.x - 280, spawn.y - 20, "hunter");
-    this.hunter = new Hunter(hunterSprite);
-    const hunterGlow = this.add.image(hunterSprite.x, hunterSprite.y, "hunter-glow");
-    this.hunter.attachGlow(hunterGlow);
-    this.hunter.apply("chase", this.player.x, this.player.y, 0);
+    if (HUNTERS_ENABLED) {
+      const hunterSprite = this.physics.add.sprite(spawn.x - 280, spawn.y - 20, "hunter");
+      this.hunter = new Hunter(hunterSprite);
+      const hunterGlow = this.add.image(hunterSprite.x, hunterSprite.y, "hunter-glow");
+      this.hunter.attachGlow(hunterGlow);
+      this.hunter.apply("chase", this.player.x, this.player.y, 0);
+    } else {
+      this.hunter = null;
+    }
 
     this.physics.add.collider(this.player.sprite, this.world.platforms);
     this.physics.add.overlap(this.player.sprite, this.world.spikes, () => this.hitHazard());
     this.physics.add.overlap(this.player.sprite, this.world.orbs, (_p, orb) => {
       this.collectOrb(orb as Phaser.GameObjects.GameObject);
     });
-    this.physics.add.overlap(this.player.sprite, this.hunter.sprite, () => this.hitHazard(true));
+    if (this.hunter) {
+      this.physics.add.overlap(this.player.sprite, this.hunter.sprite, () => this.hitHazard(true));
+    }
 
     this.cameras.main.startFollow(this.player.sprite, true, 0.14, 0.1);
     this.cameras.main.setFollowOffset(-240, 30);
@@ -177,7 +187,7 @@ export class PlayScene extends Phaser.Scene {
     };
 
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
-    this.pullDecisions(true, true);
+    this.pullDecisions(true, HUNTERS_ENABLED);
     this.emitHud();
   }
 
@@ -186,7 +196,7 @@ export class PlayScene extends Phaser.Scene {
 
     const controls = this.readControls();
     const frame = this.player.update(this.time.now, controls);
-    this.hunter.update(delta / 1000, this.player.x, this.player.y, this.player.vy);
+    this.hunter?.update(delta / 1000, this.player.x, this.player.y, this.player.vy);
     this.backdrop.scroll(this.cameras.main.scrollX);
     this.playerGlow.setPosition(this.player.x, this.player.y + 2);
     this.playerGlow.setFlipX(this.player.sprite.flipX);
@@ -208,11 +218,13 @@ export class PlayScene extends Phaser.Scene {
       this.trailingDash = false;
     }
 
-    const dist = this.hunter.distanceTo(this.player.x, this.player.y);
-    if (dist < NEAR_MISS_PX && dist > 30 && !this.player.invulnerable && this.time.now > this.nearMissCool) {
-      this.nearMissCool = this.time.now + 420;
-      juice.shake(this, 70, 0.0032);
-      audio.nearMiss();
+    if (this.hunter) {
+      const dist = this.hunter.distanceTo(this.player.x, this.player.y);
+      if (dist < NEAR_MISS_PX && dist > 30 && !this.player.invulnerable && this.time.now > this.nearMissCool) {
+        this.nearMissCool = this.time.now + 420;
+        juice.shake(this, 70, 0.0032);
+        audio.nearMiss();
+      }
     }
 
     if (this.player.sprite.y > GAME_HEIGHT + 50) {
@@ -256,11 +268,13 @@ export class PlayScene extends Phaser.Scene {
         hp: this.player.hp,
         dash: this.player.dashReady,
       },
-      hunter: {
-        x: Math.round(this.hunter.x),
-        aggression: Number(this.hunter.aggression.toFixed(2)),
-        dist: Math.round(this.player.x - this.hunter.x),
-      },
+      hunter: this.hunter
+        ? {
+            x: Math.round(this.hunter.x),
+            aggression: Number(this.hunter.aggression.toFixed(2)),
+            dist: Math.round(this.player.x - this.hunter.x),
+          }
+        : { ...DISABLED_HUNTER_STATE },
       ahead: this.world.aheadEncoding(this.player.x),
       score: this.score(),
       hurts: this.hurts,
@@ -271,10 +285,10 @@ export class PlayScene extends Phaser.Scene {
 
   private maybeRequest(): void {
     const needTerrain = this.world.remainingScreens(this.cameras.main.scrollX) < BUFFER_SCREENS;
-    const needHunter = this.time.now >= this.hunterDue;
+    const needHunter = HUNTERS_ENABLED && this.time.now >= this.hunterDue;
 
     if (needTerrain && !this.terrainBusy) {
-      void this.pullDecisions(true, needHunter || !this.hunterBusy);
+      void this.pullDecisions(true, needHunter || (HUNTERS_ENABLED && !this.hunterBusy));
       return;
     }
     if (needHunter && !this.hunterBusy && !this.terrainBusy) {
@@ -301,9 +315,9 @@ export class PlayScene extends Phaser.Scene {
     if (terrain && result.terrain.length) {
       this.world.append(result.terrain, result.source, result.director);
     }
-    if (hunter && result.director?.hunter) {
+    if (HUNTERS_ENABLED && this.hunter && hunter && result.director?.hunter) {
       this.applyHunter(result.director.hunter);
-    } else if (hunter && result.hunterMove) {
+    } else if (HUNTERS_ENABLED && this.hunter && hunter && result.hunterMove) {
       this.hunter.apply(result.hunterMove, this.player.x, this.player.y, this.player.vy, this.score());
       this.hunterDue = this.time.now + HUNTER_TICK_MS;
     }
@@ -324,6 +338,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private applyHunter(tactics: HunterTactics): void {
+    if (!this.hunter) return;
     this.hunter.applyTactics(
       tactics,
       this.player.x,
@@ -368,7 +383,7 @@ export class PlayScene extends Phaser.Scene {
     juice.burst(this.player.x, this.player.y, MAGENTA, 18, 240);
     this.cameras.main.flash(90, 255, 43, 214, false);
     audio.hit();
-    if (fromHunter) this.hunter.sprite.x -= 130;
+    if (fromHunter) this.hunter?.sprite.x -= 130;
     if (this.player.hp <= 0) this.finish();
   }
 
@@ -409,7 +424,7 @@ export class PlayScene extends Phaser.Scene {
       callCount: this.hooks.jev.callCount,
       source: this.hooks.jev.lastSource,
       warning: this.hooks.jev.warning,
-      hunterMove: this.hunter.stance,
+      hunterMove: this.hunter?.stance ?? "",
       motif: this.motif,
       event: this.lastEvent,
       juiceCue: this.juiceCue,

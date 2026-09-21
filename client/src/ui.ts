@@ -123,7 +123,9 @@ export function bindUi(controls: ControlState): {
     $("hud-hp").textContent = "●".repeat(Math.max(0, snap.hp)).padEnd(snap.maxHp, "○");
     const src = snap.source === "jev" ? "Jev" : snap.source === "fallback" ? "Local" : "Jev";
     $("hud-jev").textContent = `${src} · ${snap.latencyMs || "—"}ms`;
-    $("hud-jev").title = `${snap.motif} · ${snap.hunterMove} · flow ${snap.difficulty}`;
+    $("hud-jev").title = snap.hunterMove
+      ? `${snap.motif} · ${snap.hunterMove} · flow ${snap.difficulty}`
+      : `${snap.motif} · flow ${snap.difficulty}`;
     if (snap.combo >= 2) {
       combo.hidden = false;
       $("hud-combo-n").textContent = String(snap.combo);
