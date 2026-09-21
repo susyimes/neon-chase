@@ -383,7 +383,7 @@ export class PlayScene extends Phaser.Scene {
     juice.burst(this.player.x, this.player.y, MAGENTA, 18, 240);
     this.cameras.main.flash(90, 255, 43, 214, false);
     audio.hit();
-    if (fromHunter) this.hunter?.sprite.x -= 130;
+    if (fromHunter && this.hunter) this.hunter.sprite.x -= 130;
     if (this.player.hp <= 0) this.finish();
   }
 
