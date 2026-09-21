@@ -18,12 +18,27 @@ const hooks = {
   onGameOver: (result: RunResult) => ui.showGameOver(result),
 };
 
-const root = document.getElementById("game-root");
-if (!root) throw new Error("#game-root missing");
+const rootEl = document.getElementById("game-root");
+if (!rootEl) throw new Error("#game-root missing");
+const root = rootEl;
 
-const game = createGame(root);
+let game = createGame(root);
 let paused = false;
 let starting = false;
+
+function remakeGame(): void {
+  const scene = game.scene.getScene(PlayScene.KEY);
+  if (scene) {
+    try {
+      juice.restoreTime(scene);
+    } catch {
+      /* shutting down */
+    }
+  }
+  game.destroy(true);
+  root.replaceChildren();
+  game = createGame(root);
+}
 
 function clearControls(): void {
   controls.left = false;
@@ -48,15 +63,8 @@ function startRun(): void {
   paused = false;
   clearControls();
   ui.showPlay();
-  const scene = game.scene.getScene(PlayScene.KEY);
-  if (scene) juice.restoreTime(scene);
-  const running = Boolean(scene && (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)));
-  if (running && scene) {
-    scene.cameras.main.resetFX();
-    scene.scene.restart(hooks);
-  } else {
-    game.scene.start(PlayScene.KEY, hooks);
-  }
+  remakeGame();
+  game.scene.start(PlayScene.KEY, hooks);
   window.setTimeout(() => {
     starting = false;
   }, 250);
