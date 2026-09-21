@@ -102,7 +102,6 @@ export class PlayScene extends Phaser.Scene {
   private nearMissCool = 0;
   private trailingDash = false;
   private finishing = false;
-  private pitLatch = false;
   private runToken = 0;
 
   constructor() {
@@ -117,7 +116,6 @@ export class PlayScene extends Phaser.Scene {
     this.runToken += 1;
     this.ended = false;
     this.finishing = false;
-    this.pitLatch = false;
     this.hunter = null;
     this.hunterBusy = false;
     this.terrainBusy = false;
@@ -252,8 +250,6 @@ export class PlayScene extends Phaser.Scene {
 
     const controls = this.readControls();
     const frame = this.player.update(this.time.now, controls);
-    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | undefined;
-    if (body && (body.blocked.down || body.touching.down)) this.pitLatch = false;
     this.hunter?.update(delta / 1000, this.player.x, this.player.y, this.player.vy);
     this.backdrop.scroll(this.cameras.main.scrollX);
     this.playerGlow.setPosition(this.player.x, this.player.y + 2);
@@ -404,28 +400,10 @@ export class PlayScene extends Phaser.Scene {
 
   private handlePit(): void {
     if (this.ended || this.finishing) return;
-    // A second drop before we land again means the respawn was still in the void.
-    // End the run instead of refreshing i-frames and looping forever.
-    if (this.pitLatch) {
-      this.finish();
-      return;
-    }
-    this.pitLatch = true;
-    const applied = this.player.hurt(this.time.now, 0, true);
-    if (applied) {
-      this.hurts += 1;
-      audio.hit();
-    }
-    if (this.player.hp <= 0) {
-      this.finish();
-      return;
-    }
-    const safe = this.world.safeSpawn(this.player.x);
-    if (!safe) {
-      this.finish();
-      return;
-    }
-    this.player.spawn(safe.x, safe.y);
+    // Falling off the world is lethal. Mid-run respawn was the death loop:
+    // i-frames + spawn-in-gap refreshed forever and never reached Game Over.
+    this.hurts += 1;
+    this.finish();
   }
 
   private collectOrb(obj: Phaser.GameObjects.GameObject): void {

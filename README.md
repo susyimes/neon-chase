@@ -17,7 +17,7 @@ Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感�
 
 - **Goal:** survive, collect cyan orbs, score from distance + orbs + chain bonus.
 - **Hazards:** gaps, occasional magenta spikes, decoy lips when Jev asks for a fake-out. No pursuing hunters.
-- **HP:** 3. Spikes cost 1 HP (brief i-frames). Falling off costs 1 HP and respawns on the last walkable pad; a second drop before landing, or 0 HP, ends the run. **AGAIN** / Enter starts a fresh run from the opening street.
+- **HP:** 3. Spikes cost 1 HP (brief i-frames). Falling off the world ends the run. **AGAIN** / Enter starts a fresh run from the opening street.
 - **Juice:** hit-stop, camera shake, neon particles, land squash, dash trails, combo pops.
 - **Audio:** procedural Web Audio pad + one-shots. Mute persists in `localStorage` (`M` or the LIVE/MUTE chip). Music ducks when you get hit.
 

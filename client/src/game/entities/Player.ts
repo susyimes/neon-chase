@@ -161,8 +161,8 @@ export class Player {
     return out;
   }
 
-  hurt(now: number, knock = -180, pierceIframes = false): boolean {
-    if (!pierceIframes && this.invulnerable) return false;
+  hurt(now: number, knock = -180): boolean {
+    if (this.invulnerable) return false;
     this.hp -= 1;
     this.invulnUntil = now + IFRAME_MS;
     this.sprite.setVelocity(knock, -220);
