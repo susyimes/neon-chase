@@ -92,6 +92,8 @@ export function bindUi(controls: ControlState): {
     setOverlay(title, false);
     setOverlay(gameover, false);
     setOverlay(pause, false);
+    $("hud-score").textContent = "0";
+    $("hud-hp").textContent = "●●●";
     hud.classList.add("is-on");
   };
 

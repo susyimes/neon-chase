@@ -70,8 +70,9 @@ export class TerrainWorld {
 
   /**
    * Standing point on a real walkable pad (not spikes, not orb-only slices).
+   * Default is the first pad — a new run starts at the beginning of the street.
    * When `fromX` is set, prefer the rightmost pad that starts at or behind the
-   * player so a pit respawn does not teleport into an unbuilt gap ahead.
+   * player (used if a mid-run placement is ever needed).
    */
   safeSpawn(fromX?: number): { x: number; y: number } | null {
     const pads = this.segments.filter((seg) => seg.walkable && seg.spec.surface !== "spike");
@@ -84,8 +85,8 @@ export class TerrainWorld {
         }
       }
     }
-    const last = pads[pads.length - 1];
-    return { x: last.safeX, y: last.platformY - 28 };
+    const first = pads[0];
+    return { x: first.safeX, y: first.platformY - 28 };
   }
 
   append(specs: TerrainSegmentSpec[], source: "jev" | "fallback", plan?: DirectorPlan): void {

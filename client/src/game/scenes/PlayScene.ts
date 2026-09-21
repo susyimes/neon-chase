@@ -139,6 +139,7 @@ export class PlayScene extends Phaser.Scene {
 
     this.physics.world.gravity.y = GRAVITY;
     this.physics.world.setBounds(0, 0, Number.MAX_SAFE_INTEGER, GAME_HEIGHT + 80);
+    this.cameras.main.resetFX();
     this.cameras.main.setBackgroundColor(0x050510);
     this.cameras.main.fadeIn(280, 5, 5, 16);
 
@@ -162,7 +163,7 @@ export class PlayScene extends Phaser.Scene {
       );
     }
 
-    const spawn = this.world.lastSafeX();
+    const spawn = this.world.safeSpawn() ?? this.world.lastSafeX();
     const playerSprite = this.physics.add.sprite(spawn.x, spawn.y, "runner");
     this.player = new Player(playerSprite);
     this.player.beginRun(spawn.x, spawn.y);
