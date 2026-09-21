@@ -1,4 +1,5 @@
 import { safeDirector } from "../../shared/defaults.ts";
+import { WALKABLE_PAD_TILES } from "../../shared/pads.ts";
 import type {
   DecideRequest,
   DecideResponse,
@@ -11,7 +12,7 @@ export function safeTerrain(count: number): TerrainSegmentSpec[] {
   const n = Math.max(1, Math.min(3, Math.floor(count)));
   return Array.from({ length: n }, () => ({
     surface: "solid" as const,
-    width: 5 as const,
+    width: WALKABLE_PAD_TILES,
     gap: 0 as const,
     height: 5 as const,
   }));

@@ -8,9 +8,11 @@ import type {
   MotifKind,
 } from "@shared/types.ts";
 import {
+  AUTO_RUN,
   BUFFER_SCREENS,
   COMBO_BONUS,
   COMBO_WINDOW_MS,
+  DEBUG_PAD_LABELS,
   GAME_HEIGHT,
   GRAVITY,
   HUNTERS_ENABLED,
@@ -140,6 +142,18 @@ export class PlayScene extends Phaser.Scene {
 
     this.world = new TerrainWorld(this);
     this.world.append(safeSpecs(8), "fallback");
+    if (DEBUG_PAD_LABELS) {
+      // Authored as the old 2–3 tile stubs so playtest proves the 1s clamp.
+      this.world.append(
+        [
+          { surface: "ledge", width: 2, gap: 1, height: 6 },
+          { surface: "ledge", width: 2, gap: 1, height: 7 },
+          { surface: "ledge", width: 3, gap: 1, height: 5 },
+          { surface: "solid", width: 2, gap: 2, height: 5 },
+        ],
+        "fallback",
+      );
+    }
 
     const spawn = this.world.lastSafeX();
     const playerSprite = this.physics.add.sprite(spawn.x, spawn.y, "runner");
@@ -189,6 +203,39 @@ export class PlayScene extends Phaser.Scene {
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
     this.pullDecisions(true, HUNTERS_ENABLED);
     this.emitHud();
+    this.exposePadDebug();
+  }
+
+  private exposePadDebug(): void {
+    if (!DEBUG_PAD_LABELS) return;
+    const scene = this;
+    (window as Window & { __neonChase?: unknown }).__neonChase = {
+      snapshot() {
+        const vx = scene.player.vx || AUTO_RUN;
+        return {
+          player: {
+            x: Math.round(scene.player.x),
+            vx: Math.round(vx),
+            hp: scene.player.hp,
+            score: scene.score(),
+          },
+          pads: scene.world.segments
+            .filter((seg) => seg.spec.surface !== "spike")
+            .map((seg) => {
+              const padPx = seg.spec.width * TILE;
+              return {
+                surface: seg.spec.surface,
+                tiles: seg.spec.width,
+                padPx,
+                gap: seg.spec.gap,
+                startX: Math.round(seg.startX),
+                dwellAtAutoRun: Number((padPx / AUTO_RUN).toFixed(3)),
+                dwellAtPlayerVx: Number((padPx / Math.max(60, vx)).toFixed(3)),
+              };
+            }),
+        };
+      },
+    };
   }
 
   update(_time: number, delta: number): void {

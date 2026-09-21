@@ -6,6 +6,11 @@ Endless side-scrolling runner. You run, jump, and dash. **TypeSafe Jev** (System
 
 This build is a **calmer runner**: hunters / 追兵 are disabled in gameplay (`HUNTERS_ENABLED = false` in `client/src/config.ts`). Pressure comes from scrolling terrain and occasional obstacles. Spike density is throttled to about **1/3 or less** of the previous rules (`SPIKE_SURFACE_KEEP`, `SPIKE_NUB_KEEP`).
 
+Walkable platforms (solids, ledges, gauntlet steps, fake-out colliders) last **~1 second** at auto-run. Formula in `shared/pads.ts` and `client/src/config.ts`:
+
+`WALKABLE_PAD_PX = AUTO_RUN × WALKABLE_PAD_SECONDS` → `230 × 1.0 = 230px`  
+`WALKABLE_PAD_TILES = ceil(230 / TILE)` → `ceil(230 / 40) = 6` tiles (240px ≈ **1.04s**). Jev width choices are `6 | 8 | 10`. Gaps stay short; spike slabs are not stretched. Open `?pads=1` to paint tile/dwell labels while playtesting.
+
 Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF) (BV1q843z1EgF): constrained cyan/magenta grade, shared L-corner chrome on title/HUD/game-over, cool fog vs warm neon, parallax city, quiet Jev whisper, distinct confirm/back/tick/hold SFX, faded overlay transitions, contextual particles, land/hurt squash, and one geometric-neon direction — not more features.
 
 ## Play / 怎么玩
@@ -78,7 +83,7 @@ All questions in one `systemone` call run **in parallel**. The client prefetches
 {
   "player": { "x": 0, "y": 0, "vx": 0, "vy": 0, "hp": 3, "dash": true },
   "hunter": { "x": 0, "aggression": 0.5, "dist": 160 },
-  "ahead": ["solid:5", "gap:2"],
+  "ahead": ["solid:6", "gap:2"],
   "score": 0,
   "hurts": 0,
   "lastEvent": "none",
@@ -95,14 +100,14 @@ Every answer is consumed. Fallback fills each field deterministically when the k
 | Question id | Type | Criteria | Gameplay |
 | --- | --- | --- | --- |
 | `s?_next_surface` | Choice | `solid` \| `ledge` \| `spike` | Platform kind |
-| `s?_width` | Choice | `2` \| `3` \| `5` | Width in tiles |
+| `s?_width` | Choice | `6` \| `8` \| `10` | Width in tiles (≥1s pad; legacy 2/3/5 remapped) |
 | `s?_gap` | Choice | `0` \| `1` \| `2` | Empty tiles after the slab |
 | `s?_height` | Choice | `4`–`9` | Row from the bottom |
 | `rhythm` | Choice | `easy` \| `build` \| `punish` | Orb count / how greedy the slice feels |
 | `motif` | Choice | `neon_alley` \| `rooftop` \| `underpass` | Palette, skyline tint, platform edge language |
 | `hazard_density` | Choice | `low` \| `mid` \| `high` | Extra spike nubs on otherwise-safe slabs |
 | `orb_style` | Choice | `trail` \| `cluster` \| `high_risk` | Orb layout (line / triangle / over gaps) |
-| `fakeout` | Choice | `yes` \| `no` | Decoy lip: glow wider than the collider |
+| `fakeout` | Choice | `yes` \| `no` | Decoy lip: glow wider than an honest ~1s collider |
 | `flow` | Score (9 levels → **2–10**) | recovery … peak heat | HUD “flow” |
 | `event_beat` | Choice | `none` \| `ambush_spike_run` \| `orb_fountain` \| `narrow_gauntlet` \| `calm_breather` | Visible set-piece prepended to the slice |
 | `juice_cue` | Choice | `pulse` \| `drop` \| `rise` \| `sting` \| `hush` | SFX + VFX accent for this beat |
@@ -115,7 +120,7 @@ Every answer is consumed. Fallback fills each field deterministically when the k
 
 - `ambush_spike_run` — one short spike slab + sting juice (was two slabs)
 - `orb_fountain` — arc of extra orbs
-- `narrow_gauntlet` — three stub ledges with hops
+- `narrow_gauntlet` — three ~1s ledges with hops
 - `calm_breather` — long safe slab
 - `none` — compose only the segment answers
 
@@ -129,7 +134,7 @@ Score `flow` uses an ordered 9-level `criteria` array (System One indices 0–8)
   "source": "jev",
   "latencyMs": 412,
   "model": "jev-1.13.0",
-  "terrain": [{ "surface": "ledge", "width": 3, "gap": 1, "height": 7 }],
+  "terrain": [{ "surface": "ledge", "width": 8, "gap": 1, "height": 7 }],
   "hunterMove": "bait",
   "director": {
     "composition": {

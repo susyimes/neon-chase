@@ -1,3 +1,5 @@
+import { WALKABLE_WIDTHS, type WalkableWidth } from "./pads.ts";
+
 export type SurfaceKind = "solid" | "ledge" | "spike";
 export type HunterMove = "chase" | "jump" | "bait" | "hold";
 export type DecisionSource = "jev" | "fallback";
@@ -17,7 +19,8 @@ export type HunterStance = "pressure" | "bait" | "cut_off" | "retreat";
 export type HunterVertical = "above" | "level" | "below";
 
 export const SURFACES: readonly SurfaceKind[] = ["solid", "ledge", "spike"];
-export const WIDTHS = [2, 3, 5] as const;
+/** Jev width choices: 6 / 8 / 10 tiles (all ≥ ~1s at auto-run). See `shared/pads.ts`. */
+export const WIDTHS = WALKABLE_WIDTHS;
 export const GAPS = [0, 1, 2] as const;
 export const HEIGHTS = [4, 5, 6, 7, 8, 9] as const;
 export const HUNTER_MOVES: readonly HunterMove[] = [
@@ -60,7 +63,7 @@ export const HUNTER_VERTICALS: readonly HunterVertical[] = [
   "below",
 ];
 
-export type WidthChoice = (typeof WIDTHS)[number];
+export type WidthChoice = WalkableWidth;
 export type GapChoice = (typeof GAPS)[number];
 export type HeightChoice = (typeof HEIGHTS)[number];
 
@@ -90,7 +93,8 @@ export interface CompactGameState {
 
 export interface TerrainSegmentSpec {
   surface: SurfaceKind;
-  width: WidthChoice;
+  /** Width in tiles. Walkable pads are clamped to ≥ WALKABLE_PAD_TILES when built. */
+  width: number;
   gap: GapChoice;
   height: HeightChoice;
 }

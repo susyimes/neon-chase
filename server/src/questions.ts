@@ -87,11 +87,11 @@ export function buildJevBody(
       };
       questions[`${p}width`] = {
         type: "choice",
-        instructions: `${nth} platform width in tiles. Short widths punish; long widths breathe. Prefer 5 if hp=1.`,
+        instructions: `${nth} platform width in tiles. Every walkable pad must last ~1s at auto-run (6 tiles = 240px / 230px/s). Never pick shorter than 6. Prefer 8 if hp=1.`,
         criteria: {
-          "2": "Stub — gauntlet / punish / dash-check",
-          "3": "Medium stride",
-          "5": "Long rest slab",
+          "6": "One-second landing pad — the control floor",
+          "8": "Longer stride — room to aim the next jump",
+          "10": "Rest slab — breathe and collect",
         },
       };
       questions[`${p}gap`] = {
@@ -157,7 +157,7 @@ export function buildJevBody(
       type: "choice",
       instructions: `Whether to paint a decoy lip that is shorter than it looks. Yes only if hp>=2, dash ready, and rhythm is build or punish. Never after lastEvent=ambush_spike_run.`,
       criteria: {
-        yes: "Ghost slab — glow wider than the collider",
+        yes: "Ghost slab — glow wider than an honest ~1s collider (never a micro-pad)",
         no: "Honest collision, no decoy",
       },
     };
@@ -183,7 +183,7 @@ export function buildJevBody(
         none: "No set-piece — keep composing normal slabs",
         ambush_spike_run: "One short spike slab — rare magenta sting. Need hp=3",
         orb_fountain: "Arc of extra orbs, a visible gift",
-        narrow_gauntlet: "Three stub ledges with hops — dash check",
+        narrow_gauntlet: "Three ~1s ledges with hops — still a dash check, but each pad is landable",
         calm_breather: "Long safe slab, a breather",
       },
     };

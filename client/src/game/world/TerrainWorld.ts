@@ -5,7 +5,16 @@ import type {
   MotifKind,
   TerrainSegmentSpec,
 } from "@shared/types.ts";
-import { GAME_HEIGHT, GAME_WIDTH, SPIKE_NUB_KEEP, SPIKE_SURFACE_KEEP, TILE } from "../../config.ts";
+import { walkableDwellSeconds, walkableWidthPx, WALKABLE_PAD_TILES } from "@shared/pads.ts";
+import {
+  AUTO_RUN,
+  DEBUG_PAD_LABELS,
+  GAME_HEIGHT,
+  GAME_WIDTH,
+  SPIKE_NUB_KEEP,
+  SPIKE_SURFACE_KEEP,
+  TILE,
+} from "../../config.ts";
 import { MOTIF_PALETTES } from "../../palette.ts";
 
 export interface BuiltSegment {
@@ -84,10 +93,10 @@ export class TerrainWorld {
     this.lastEvent = plan.event;
     const h = this.segments.at(-1)?.spec.height ?? 5;
     if (plan.event === "calm_breather") {
-      this.buildOne({ surface: "solid", width: 5, gap: 0, height: 5 }, source, plan, true);
+      this.buildOne({ surface: "solid", width: 10, gap: 0, height: 5 }, source, plan, true);
     } else if (plan.event === "narrow_gauntlet") {
       for (let i = 0; i < 3; i += 1) {
-        this.buildOne({ surface: "ledge", width: 2, gap: 1, height: h }, source, plan, true);
+        this.buildOne({ surface: "ledge", width: WALKABLE_PAD_TILES, gap: 1, height: h }, source, plan, true);
       }
     } else if (plan.event === "ambush_spike_run") {
       // Was two slabs (5+3 spike tiles). One short slab is ~1/3 of that.
@@ -100,24 +109,26 @@ export class TerrainWorld {
   private buildFakeout(source: "jev" | "fallback"): void {
     const pal = MOTIF_PALETTES[this.motif];
     const startX = this.cursorX;
-    const width = TILE * 3;
+    const width = walkableWidthPx(WALKABLE_PAD_TILES, "ledge", TILE);
+    const decoy = width + TILE * 2;
     const platformY = GAME_HEIGHT - 6 * TILE;
     const glow = this.scene.add
-      .rectangle(startX - 6, platformY - 5, width + 12, 16, pal.platEdge, 0.22)
+      .rectangle(startX - 6, platformY - 5, decoy + 12, 16, pal.platEdge, 0.22)
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.ADD);
     const body = this.scene.add
-      .rectangle(startX, platformY, TILE, 16, pal.plat)
+      .rectangle(startX, platformY, width, 16, pal.plat)
       .setOrigin(0, 0);
     const lip = this.scene.add
-      .rectangle(startX - 4, platformY, width, 3, pal.platEdge, 0.85)
+      .rectangle(startX - 4, platformY, decoy, 3, pal.platEdge, 0.85)
       .setOrigin(0, 0);
     this.scene.physics.add.existing(body, true);
     this.platforms.add(body);
     const objects: Phaser.GameObjects.GameObject[] = [glow, body, lip];
-    this.cursorX = startX + TILE + TILE;
+    this.paintPadLabel(objects, startX, platformY, width, "ledge");
+    this.cursorX = startX + width + TILE;
     this.segments.push({
-      spec: { surface: "ledge", width: 2, gap: 1, height: 6 },
+      spec: { surface: "ledge", width: WALKABLE_PAD_TILES, gap: 1, height: 6 },
       source,
       startX,
       endX: this.cursorX,
@@ -134,8 +145,9 @@ export class TerrainWorld {
   ): void {
     const pal = MOTIF_PALETTES[this.motif];
     const startX = this.cursorX;
-    const width = spec.width * TILE;
     const surface = this.effectiveSurface(spec, fromEvent);
+    const width = walkableWidthPx(spec.width, surface, TILE);
+    const tiles = Math.round(width / TILE);
     const thickness = surface === "ledge" ? 14 : 22;
     const platformY = GAME_HEIGHT - spec.height * TILE;
     const color = surface === "spike" ? 0x4a1838 : pal.plat;
@@ -162,15 +174,17 @@ export class TerrainWorld {
 
     const objects: Phaser.GameObjects.GameObject[] = [glow, body, face, lip, sheen, under];
 
+    this.paintPadLabel(objects, startX, platformY, width, surface);
+
     if (surface === "spike") {
-      const count = spec.width;
+      const count = tiles;
       for (let i = 0; i < count; i += 1) {
         objects.push(...this.spikeAt(startX + i * TILE + TILE / 2, platformY, pal.spike));
       }
     }
 
     const density = plan?.composition.hazardDensity ?? "low";
-    if (surface !== "spike" && (density === "high" || (density === "mid" && spec.width >= 5))) {
+    if (surface !== "spike" && (density === "high" || (density === "mid" && tiles >= WALKABLE_PAD_TILES))) {
       this.nubCandidates += 1;
       const period = Math.max(1, Math.round(1 / SPIKE_NUB_KEEP));
       if (this.nubCandidates % period === 0) {
@@ -179,19 +193,41 @@ export class TerrainWorld {
       }
     }
 
-    this.placeOrbs({ ...spec, surface }, source, startX, width, platformY, plan, fromEvent, objects);
+    this.placeOrbs({ ...spec, surface, width: tiles }, source, startX, width, platformY, plan, fromEvent, objects);
 
     const gap = spec.gap * TILE;
     const endX = startX + width + gap;
     this.cursorX = endX;
     this.segments.push({
-      spec: { ...spec, surface },
+      spec: { ...spec, surface, width: tiles },
       source,
       startX,
       endX,
       platformY,
       objects,
     });
+  }
+
+  private paintPadLabel(
+    objects: Phaser.GameObjects.GameObject[],
+    startX: number,
+    platformY: number,
+    width: number,
+    surface: TerrainSegmentSpec["surface"],
+  ): void {
+    if (!DEBUG_PAD_LABELS || surface === "spike") return;
+    const tiles = Math.round(width / TILE);
+    const dwell = walkableDwellSeconds(width, AUTO_RUN);
+    const label = this.scene.add
+      .text(startX + 8, platformY - 18, `${tiles}t · ${dwell.toFixed(2)}s`, {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#7ef9ff",
+      })
+      .setOrigin(0, 1)
+      .setDepth(8)
+      .setAlpha(0.85);
+    objects.push(label);
   }
 
   /** Keep ~SPIKE_SURFACE_KEEP of Jev spike slabs; event spikes stay as authored. */
@@ -229,7 +265,7 @@ export class TerrainWorld {
     const canOrb = spec.surface !== "spike" || spec.width >= 3;
     const rhythm = plan?.composition.rhythm ?? "easy";
     if (!canOrb && style !== "high_risk") return;
-    if (source === "fallback" && spec.width !== 5 && !fromEvent) return;
+    if (source === "fallback" && spec.width < WALKABLE_PAD_TILES && !fromEvent) return;
 
     if (style === "cluster" && spec.surface !== "spike") {
       const cx = startX + width * 0.55;
@@ -245,7 +281,7 @@ export class TerrainWorld {
       return;
     }
 
-    const count = rhythm === "easy" || spec.width === 5 ? 2 : 1;
+    const count = rhythm === "easy" || spec.width >= 8 ? 2 : 1;
     for (let i = 0; i < count; i += 1) {
       const t = count === 1 ? 0.62 : 0.35 + i * 0.32;
       objects.push(this.makeOrb(startX + width * t, platformY - 42));
