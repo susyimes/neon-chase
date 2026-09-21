@@ -22,6 +22,7 @@ export class Hunter {
     body.setAllowGravity(false);
     body.setSize(28, 28);
     sprite.setImmovable(true);
+    sprite.setScale(1.2);
     sprite.setDepth(6);
     this.fromX = sprite.x;
     this.fromY = sprite.y;

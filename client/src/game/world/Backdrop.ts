@@ -16,7 +16,7 @@ export class Backdrop {
     this.sky = scene.add.graphics().setScrollFactor(0).setDepth(0);
     this.paintSky();
 
-    for (let i = 0; i < 42; i += 1) {
+    for (let i = 0; i < 70; i += 1) {
       const star = scene.add.circle(
         Phaser.Math.Between(0, GAME_WIDTH),
         Phaser.Math.Between(8, GAME_HEIGHT - 160),
@@ -35,33 +35,40 @@ export class Backdrop {
       });
     }
 
+    scene.add
+      .rectangle(0, GAME_HEIGHT - 168, GAME_WIDTH, 6, 0x00f0ff, 0.18)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(1)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
     this.far = scene.add
-      .tileSprite(0, GAME_HEIGHT - 8, GAME_WIDTH, 160, "sky-far")
+      .tileSprite(0, GAME_HEIGHT - 8, GAME_WIDTH, 180, "sky-far")
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(1)
-      .setAlpha(0.85);
+      .setAlpha(1);
     this.mid = scene.add
-      .tileSprite(0, GAME_HEIGHT + 6, GAME_WIDTH, 200, "sky-mid")
+      .tileSprite(0, GAME_HEIGHT + 4, GAME_WIDTH, 220, "sky-mid")
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(1)
-      .setAlpha(0.9);
+      .setAlpha(0.95);
     this.near = scene.add
-      .tileSprite(0, GAME_HEIGHT + 18, GAME_WIDTH, 140, "sky-near")
+      .tileSprite(0, GAME_HEIGHT + 16, GAME_WIDTH, 160, "sky-near")
       .setOrigin(0, 1)
       .setScrollFactor(0)
       .setDepth(2)
-      .setAlpha(0.7);
+      .setAlpha(0.88);
 
     this.fog = scene.add
-      .rectangle(0, GAME_HEIGHT - 110, GAME_WIDTH, 130, 0xff2bd6, 0.07)
+      .rectangle(0, GAME_HEIGHT - 86, GAME_WIDTH, 86, 0xff2bd6, 0.05)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(2)
       .setBlendMode(Phaser.BlendModes.ADD);
     this.haze = scene.add
-      .rectangle(0, 0, GAME_WIDTH, 70, 0x00f0ff, 0.04)
+      .rectangle(0, 0, GAME_WIDTH, 64, 0x00f0ff, 0.045)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(2)

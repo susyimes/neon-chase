@@ -8,7 +8,7 @@
   --muted: #7f8aa8;
   --panel: rgba(6, 8, 20, 0.78);
   --danger: #ff5c8a;
-  --font-display: "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-display: "Noto Sans", "Noto Sans SC", "DejaVu Sans", "Segoe UI", "PingFang SC", sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-family: var(--font-display);
 }
@@ -240,7 +240,7 @@ body {
   justify-content: center;
   align-items: flex-start;
   padding: clamp(20px, 5vw, 56px);
-  background: linear-gradient(90deg, rgba(5, 5, 16, 0.94) 0%, rgba(8, 6, 22, 0.78) 62%, rgba(5, 5, 16, 0.35));
+  background: linear-gradient(90deg, rgba(5, 5, 16, 0.88) 0%, rgba(8, 6, 22, 0.62) 58%, rgba(5, 5, 16, 0.18));
   opacity: 0;
   transform: translateY(8px);
   transition: opacity 0.35s ease, transform 0.35s ease;

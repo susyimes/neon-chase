@@ -133,24 +133,31 @@ export class TerrainWorld {
     const pal = MOTIF_PALETTES[this.motif];
     const startX = this.cursorX;
     const width = spec.width * TILE;
-    const thickness = spec.surface === "ledge" ? 12 : 18;
+    const thickness = spec.surface === "ledge" ? 14 : 22;
     const platformY = GAME_HEIGHT - spec.height * TILE;
-    const color = spec.surface === "spike" ? 0x3a1028 : pal.plat;
+    const color = spec.surface === "spike" ? 0x4a1838 : pal.plat;
     const edge = spec.surface === "spike" ? pal.spike : pal.platEdge;
 
     const glow = this.scene.add
-      .rectangle(startX - 4, platformY - 6, width + 8, 14, edge, 0.2)
+      .rectangle(startX - 8, platformY - 8, width + 16, 20, edge, 0.32)
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.ADD);
     const body = this.scene.add.rectangle(startX, platformY, width, thickness, color).setOrigin(0, 0);
-    const lip = this.scene.add.rectangle(startX, platformY, width, 3, edge, 0.95).setOrigin(0, 0);
+    const face = this.scene.add
+      .rectangle(startX, platformY + 3, width, thickness - 3, 0x000000, 0.22)
+      .setOrigin(0, 0);
+    const lip = this.scene.add.rectangle(startX, platformY, width, 4, edge, 1).setOrigin(0, 0);
+    const sheen = this.scene.add
+      .rectangle(startX, platformY + 4, width, 2, 0xffffff, 0.18)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD);
     const under = this.scene.add
-      .rectangle(startX, platformY + thickness, width, 4, 0x000000, 0.35)
+      .rectangle(startX, platformY + thickness, width, 6, 0x000000, 0.45)
       .setOrigin(0, 0);
     this.scene.physics.add.existing(body, true);
     this.platforms.add(body);
 
-    const objects: Phaser.GameObjects.GameObject[] = [glow, body, lip, under];
+    const objects: Phaser.GameObjects.GameObject[] = [glow, body, face, lip, sheen, under];
 
     if (spec.surface === "spike") {
       const count = spec.width;

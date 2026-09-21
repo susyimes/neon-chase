@@ -135,7 +135,7 @@ export class Player {
 
     this.scaleX = Phaser.Math.Linear(this.scaleX, 1, 0.18);
     this.scaleY = Phaser.Math.Linear(this.scaleY, 1, 0.18);
-    this.sprite.setScale(this.scaleX, this.scaleY);
+    this.sprite.setScale(this.scaleX * 1.18, this.scaleY * 1.18);
     this.sprite.setFlipX(this.facing < 0);
     this.sprite.setAlpha(this.invulnerable && Math.floor(now / 70) % 2 === 0 ? 0.35 : 1);
     this.maxX = Math.max(this.maxX, this.sprite.x);

@@ -146,7 +146,7 @@ export class PlayScene extends Phaser.Scene {
     this.playerGlow.setDepth(4);
     this.playerGlow.setAlpha(0.55);
 
-    const hunterSprite = this.physics.add.sprite(spawn.x - 160, spawn.y - 20, "hunter");
+    const hunterSprite = this.physics.add.sprite(spawn.x - 280, spawn.y - 20, "hunter");
     this.hunter = new Hunter(hunterSprite);
     const hunterGlow = this.add.image(hunterSprite.x, hunterSprite.y, "hunter-glow");
     this.hunter.attachGlow(hunterGlow);
@@ -191,7 +191,7 @@ export class PlayScene extends Phaser.Scene {
     this.playerGlow.setPosition(this.player.x, this.player.y + 2);
     this.playerGlow.setFlipX(this.player.sprite.flipX);
     this.playerGlow.setAlpha(this.player.invulnerable ? 0.2 : 0.5 + Math.sin(this.time.now / 140) * 0.15);
-    this.playerGlow.setScale(this.player.sprite.scaleX * 1.05, this.player.sprite.scaleY * 1.05);
+    this.playerGlow.setScale(this.player.sprite.scaleX * 1.15, this.player.sprite.scaleY * 1.15);
 
     if (frame.jumped) audio.jump();
     if (frame.dashed) {

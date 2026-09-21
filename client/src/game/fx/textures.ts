@@ -88,9 +88,9 @@ export function makeGameTextures(scene: Phaser.Scene): void {
   streak.generateTexture("px-streak", 14, 6);
   streak.destroy();
 
-  makeSkyline(scene, "sky-far", 640, 160, 0x0a1020, 0x00f0ff, 0.15, 18, 1);
-  makeSkyline(scene, "sky-mid", 640, 200, 0x0c1830, 0x00f0ff, 0.35, 14, 2);
-  makeSkyline(scene, "sky-near", 640, 140, 0x101828, 0xff2bd6, 0.12, 10, 3);
+  makeSkyline(scene, "sky-far", 640, 180, 0x152038, 0x00f0ff, 0.35, 16, 1);
+  makeSkyline(scene, "sky-mid", 640, 220, 0x1a2c4c, 0x7ad7ff, 0.55, 13, 2);
+  makeSkyline(scene, "sky-near", 640, 160, 0x0c1424, 0xff2bd6, 0.22, 9, 3);
 
   const vig = gfx(scene);
   vig.fillStyle(0x000000, 0);
