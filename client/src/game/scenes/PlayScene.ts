@@ -102,6 +102,8 @@ export class PlayScene extends Phaser.Scene {
   private nearMissCool = 0;
   private trailingDash = false;
   private finishing = false;
+  private pitLatch = false;
+  private runToken = 0;
 
   constructor() {
     super(PlayScene.KEY);
@@ -112,10 +114,17 @@ export class PlayScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.runToken += 1;
     this.ended = false;
     this.finishing = false;
+    this.pitLatch = false;
     this.hunter = null;
     this.hunterBusy = false;
+    this.terrainBusy = false;
+    this.nearMissCool = 0;
+    this.trailingDash = false;
+    this.events.off(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown, this);
     this.orbsCollected = 0;
     this.orbBonus = 0;
     this.combo = 0;
@@ -158,7 +167,7 @@ export class PlayScene extends Phaser.Scene {
     const spawn = this.world.lastSafeX();
     const playerSprite = this.physics.add.sprite(spawn.x, spawn.y, "runner");
     this.player = new Player(playerSprite);
-    this.player.spawn(spawn.x, spawn.y);
+    this.player.beginRun(spawn.x, spawn.y);
     this.playerGlow = this.add.image(spawn.x, spawn.y, "runner-glow");
     this.playerGlow.setBlendMode(Phaser.BlendModes.ADD);
     this.playerGlow.setDepth(4);
@@ -220,7 +229,7 @@ export class PlayScene extends Phaser.Scene {
             score: scene.score(),
           },
           pads: scene.world.segments
-            .filter((seg) => seg.spec.surface !== "spike")
+            .filter((seg) => seg.walkable && seg.spec.surface !== "spike")
             .map((seg) => {
               const padPx = seg.spec.width * TILE;
               return {
@@ -239,10 +248,12 @@ export class PlayScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.ended) return;
+    if (this.ended || this.finishing) return;
 
     const controls = this.readControls();
     const frame = this.player.update(this.time.now, controls);
+    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | undefined;
+    if (body && (body.blocked.down || body.touching.down)) this.pitLatch = false;
     this.hunter?.update(delta / 1000, this.player.x, this.player.y, this.player.vy);
     this.backdrop.scroll(this.cameras.main.scrollX);
     this.playerGlow.setPosition(this.player.x, this.player.y + 2);
@@ -275,15 +286,8 @@ export class PlayScene extends Phaser.Scene {
     }
 
     if (this.player.sprite.y > GAME_HEIGHT + 50) {
-      this.player.hurt(this.time.now, 0);
-      this.hurts += 1;
-      audio.hit();
-      if (this.player.hp <= 0) {
-        this.finish();
-        return;
-      }
-      const safe = this.world.lastSafeX();
-      this.player.spawn(Math.max(safe.x, this.cameras.main.scrollX + 80), safe.y);
+      this.handlePit();
+      return;
     }
 
     this.world.cull(this.cameras.main.scrollX);
@@ -344,6 +348,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private async pullDecisions(terrain: boolean, hunter: boolean): Promise<void> {
+    const token = this.runToken;
     if (terrain) this.terrainBusy = true;
     if (hunter) this.hunterBusy = true;
 
@@ -355,7 +360,7 @@ export class PlayScene extends Phaser.Scene {
       },
     });
 
-    if (!this.sys.isActive() || this.ended) return;
+    if (!this.sys.isActive() || this.runToken !== token || this.ended) return;
 
     if (terrain && result.director) this.applyDirector(result.director);
 
@@ -397,8 +402,34 @@ export class PlayScene extends Phaser.Scene {
     this.hunterDue = this.time.now + HUNTER_TICK_MS;
   }
 
+  private handlePit(): void {
+    if (this.ended || this.finishing) return;
+    // A second drop before we land again means the respawn was still in the void.
+    // End the run instead of refreshing i-frames and looping forever.
+    if (this.pitLatch) {
+      this.finish();
+      return;
+    }
+    this.pitLatch = true;
+    const applied = this.player.hurt(this.time.now, 0, true);
+    if (applied) {
+      this.hurts += 1;
+      audio.hit();
+    }
+    if (this.player.hp <= 0) {
+      this.finish();
+      return;
+    }
+    const safe = this.world.safeSpawn(this.player.x);
+    if (!safe) {
+      this.finish();
+      return;
+    }
+    this.player.spawn(safe.x, safe.y);
+  }
+
   private collectOrb(obj: Phaser.GameObjects.GameObject): void {
-    if (!obj.active || this.ended) return;
+    if (!obj.active || this.ended || this.finishing) return;
     const img = obj as Phaser.GameObjects.Image;
     const x = img.x;
     const y = img.y;
@@ -420,7 +451,7 @@ export class PlayScene extends Phaser.Scene {
   }
 
   private hitHazard(fromHunter = false): void {
-    if (this.ended) return;
+    if (this.ended || this.finishing) return;
     const knocked = this.player.hurt(this.time.now, fromHunter ? -240 : -120);
     if (!knocked) return;
     this.hurts += 1;
@@ -437,6 +468,8 @@ export class PlayScene extends Phaser.Scene {
   private finish(): void {
     if (this.ended || this.finishing) return;
     this.finishing = true;
+    this.ended = true;
+    const token = this.runToken;
     juice.dashTrail(false);
     juice.hitStop(this, 140, 0.1);
     juice.shake(this, 260, 0.016);
@@ -445,13 +478,15 @@ export class PlayScene extends Phaser.Scene {
     this.cameras.main.flash(160, 255, 43, 214, false);
     audio.death();
     this.player.sprite.setVelocity(0, 0);
-    window.setTimeout(() => {
-      if (!this.sys.isActive()) return;
+    const body = this.player.sprite.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = false;
+    this.time.delayedCall(90, () => {
+      if (this.runToken !== token || !this.sys.isActive()) return;
       this.cameras.main.fadeOut(320, 5, 5, 16);
-    }, 90);
-    window.setTimeout(() => {
-      if (this.ended) return;
-      this.ended = true;
+    });
+    this.emitHud();
+    this.time.delayedCall(420, () => {
+      if (this.runToken !== token || !this.sys.isActive()) return;
       juice.restoreTime(this);
       this.hooks.onGameOver({
         score: this.score(),
@@ -459,7 +494,12 @@ export class PlayScene extends Phaser.Scene {
         callCount: this.hooks.jev.callCount,
         combo: this.peakCombo,
       });
-    }, 420);
+    });
+  }
+
+  private onShutdown(): void {
+    juice.dashTrail(false);
+    juice.restoreTime(this);
   }
 
   private emitHud(): void {

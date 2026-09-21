@@ -23,6 +23,10 @@ export interface BuiltSegment {
   startX: number;
   endX: number;
   platformY: number;
+  /** Standing X on the collider; omitted for orb-only / non-walkable slices. */
+  safeX: number;
+  /** True when this slice has a real platform body (not an orb fountain). */
+  walkable: boolean;
   objects: Phaser.GameObjects.GameObject[];
 }
 
@@ -61,13 +65,27 @@ export class TerrainWorld {
   }
 
   lastSafeX(): { x: number; y: number } {
-    for (let i = this.segments.length - 1; i >= 0; i -= 1) {
-      const seg = this.segments[i];
-      if (seg.spec.surface !== "spike") {
-        return { x: seg.startX + TILE, y: seg.platformY - 28 };
+    return this.safeSpawn() ?? { x: 80, y: GAME_HEIGHT - 5 * TILE - 28 };
+  }
+
+  /**
+   * Standing point on a real walkable pad (not spikes, not orb-only slices).
+   * When `fromX` is set, prefer the rightmost pad that starts at or behind the
+   * player so a pit respawn does not teleport into an unbuilt gap ahead.
+   */
+  safeSpawn(fromX?: number): { x: number; y: number } | null {
+    const pads = this.segments.filter((seg) => seg.walkable && seg.spec.surface !== "spike");
+    if (!pads.length) return null;
+    if (fromX != null) {
+      for (let i = pads.length - 1; i >= 0; i -= 1) {
+        const seg = pads[i];
+        if (seg.startX <= fromX) {
+          return { x: seg.safeX, y: seg.platformY - 28 };
+        }
       }
     }
-    return { x: 80, y: GAME_HEIGHT - 5 * TILE - 28 };
+    const last = pads[pads.length - 1];
+    return { x: last.safeX, y: last.platformY - 28 };
   }
 
   append(specs: TerrainSegmentSpec[], source: "jev" | "fallback", plan?: DirectorPlan): void {
@@ -133,6 +151,8 @@ export class TerrainWorld {
       startX,
       endX: this.cursorX,
       platformY,
+      safeX: startX + width * 0.45,
+      walkable: true,
       objects,
     });
   }
@@ -204,6 +224,8 @@ export class TerrainWorld {
       startX,
       endX,
       platformY,
+      safeX: startX + width * 0.45,
+      walkable: surface !== "spike",
       objects,
     });
   }
@@ -300,6 +322,8 @@ export class TerrainWorld {
       startX: x - 40,
       endX: x + 40,
       platformY: y + 40,
+      safeX: x,
+      walkable: false,
       objects,
     });
   }

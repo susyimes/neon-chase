@@ -23,6 +23,14 @@ if (!root) throw new Error("#game-root missing");
 
 const game = createGame(root);
 let paused = false;
+let starting = false;
+
+function clearControls(): void {
+  controls.left = false;
+  controls.right = false;
+  controls.jump = false;
+  controls.dash = false;
+}
 
 async function armAudio(): Promise<void> {
   try {
@@ -33,21 +41,25 @@ async function armAudio(): Promise<void> {
 }
 
 function startRun(): void {
+  if (starting) return;
+  starting = true;
   void armAudio();
   audio.confirm();
   paused = false;
+  clearControls();
   ui.showPlay();
-  if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
-    const scene = game.scene.getScene(PlayScene.KEY);
-    if (scene) juice.restoreTime(scene);
-    game.scene.stop(PlayScene.KEY);
-  }
+  const scene = game.scene.getScene(PlayScene.KEY);
+  if (scene) juice.restoreTime(scene);
   game.scene.start(PlayScene.KEY, hooks);
+  window.setTimeout(() => {
+    starting = false;
+  }, 250);
 }
 
 function toTitle(): void {
   audio.back();
   paused = false;
+  clearControls();
   if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
     const scene = game.scene.getScene(PlayScene.KEY);
     if (scene) juice.restoreTime(scene);

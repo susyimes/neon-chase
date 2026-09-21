@@ -73,10 +73,28 @@ export class Player {
     return this.sprite.scene.time.now < this.invulnUntil;
   }
 
+  /** Full new-run reset: HP, score cursor, timers, facing, then a spawn. */
+  beginRun(x: number, y: number): void {
+    this.hp = MAX_HP;
+    this.maxX = x;
+    this.facing = 1;
+    this.dashUntil = 0;
+    this.dashReadyAt = 0;
+    this.coyoteUntil = 0;
+    this.jumpBufferedUntil = 0;
+    this.dashBufferedUntil = 0;
+    this.wasGrounded = true;
+    this.scaleX = 1;
+    this.scaleY = 1;
+    const body = this.sprite.body as Phaser.Physics.Arcade.Body | null;
+    if (body) body.enable = true;
+    this.spawn(x, y);
+  }
+
   spawn(x: number, y: number): void {
     this.sprite.setPosition(x, y);
     this.sprite.setVelocity(AUTO_RUN, 0);
-    this.maxX = x;
+    this.maxX = Math.max(this.maxX, x);
     this.invulnUntil = this.sprite.scene.time.now + 1400;
     this.scaleX = 1;
     this.scaleY = 1;
@@ -143,8 +161,8 @@ export class Player {
     return out;
   }
 
-  hurt(now: number, knock = -180): boolean {
-    if (this.invulnerable) return false;
+  hurt(now: number, knock = -180, pierceIframes = false): boolean {
+    if (!pierceIframes && this.invulnerable) return false;
     this.hp -= 1;
     this.invulnUntil = now + IFRAME_MS;
     this.sprite.setVelocity(knock, -220);
