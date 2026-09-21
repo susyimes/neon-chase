@@ -70,7 +70,7 @@ export function buildJevBody(
   const questions: Record<string, JevQuestion> = {};
   const segments = clampSegments(ask.terrainSegments);
   const f = readFacts(state);
-  const snap = `hp=${f.hp} score=${f.score} dash=${f.dash ? "ready" : "down"} hunterDist=${f.dist} hurts=${f.hurts} lastEvent=${f.lastEvent} motif=${f.motif} ahead=${f.ahead}`;
+  const snap = `hp=${f.hp} score=${f.score} dash=${f.dash ? "ready" : "down"} hurts=${f.hurts} lastEvent=${f.lastEvent} motif=${f.motif} ahead=${f.ahead}`;
 
   if (segments > 0) {
     for (let i = 0; i < segments; i += 1) {
@@ -78,11 +78,11 @@ export function buildJevBody(
       const nth = i === 0 ? "first" : i === 1 ? "second" : "third";
       questions[`${p}next_surface`] = {
         type: "choice",
-        instructions: `${nth} platform type. ${snap}. Spike only if hp>=2 and this beat is not a recovery. Ledge if rooftop motif or player is high.`,
+        instructions: `${nth} platform type. ${snap}. This is a calm runner — prefer solid. Ledge if rooftop motif or player is high. Spike only as a rare treat: hp=3, rhythm punish, and the last two surfaces were not spike.`,
         criteria: {
-          solid: "Full safe street slab — default when hp=1 or lastEvent was punish/ambush",
+          solid: "Full safe street slab — the default for this easier night",
           ledge: "Thin raised lip — rooftop language, asks for a precise land",
-          spike: "Walkable slab with magenta spikes on top — only if hp>=2",
+          spike: "Rare magenta teeth — almost never; never on recovery or after another spike",
         },
       };
       questions[`${p}width`] = {
@@ -119,11 +119,11 @@ export function buildJevBody(
 
     questions.rhythm = {
       type: "choice",
-      instructions: `Composer rhythm for this slice. ${snap}. easy if hp=1 or hurts>=2; build if score climbing and hp>=2; punish only if hp=3, dash ready, hunterDist<280.`,
+      instructions: `Composer rhythm for this slice. ${snap}. easy if hp=1 or hurts>=2; build if score climbing and hp>=2; punish only if hp=3, dash ready, and the last slice was easy or build.`,
       criteria: {
-        easy: "Recovery sidewalk — solids, tiny gaps, hunter should ease",
-        build: "Teach then tax — mix ledges, one threat",
-        punish: "Tax the confident — spikes/gaps, only when the runner can answer",
+        easy: "Recovery sidewalk — solids, tiny gaps",
+        build: "Teach then tax — mix ledges, one mild threat",
+        punish: "A wider gap or one rare spike — never a wall of teeth",
       },
     };
     questions.motif = {
@@ -137,11 +137,11 @@ export function buildJevBody(
     };
     questions.hazard_density = {
       type: "choice",
-      instructions: `Extra spike nubs and danger jewelry on otherwise-safe slabs. ${snap}. high only if hp>=2 and rhythm is build/punish.`,
+      instructions: `Extra spike nubs on otherwise-safe slabs. ${snap}. Prefer low. mid only if hp=3 and rhythm is punish. Never high on this calmer build.`,
       criteria: {
-        low: "Clean lips, almost no extra teeth",
-        mid: "A few magenta nubs on long solids",
-        high: "Teeth on most solids — skip if hp=1",
+        low: "Clean lips, almost no extra teeth — the usual pick",
+        mid: "At most one magenta nub on a long solid",
+        high: "Still sparse — the client will thin this down; avoid unless hp=3",
       },
     };
     questions.orb_style = {
@@ -163,28 +163,28 @@ export function buildJevBody(
     };
     questions.flow = {
       type: "score",
-      instructions: `How hard should the next slice feel given ${snap}? Low scores when hp=1, hurts high, or lastEvent was a set-piece. High scores only when hp=3, dash ready, score already rolling, hunter close.`,
+      instructions: `How hard should the next slice feel given ${snap}? Bias low. Low scores when hp<=2, hurts high, or lastEvent was a set-piece. High scores only when hp=3, dash ready, and score already rolling.`,
       criteria: [
         "2 street stroll — hp critical or just punished",
-        "3 soft recovery, hunter polite",
+        "3 soft recovery sidewalk",
         "4 easy alley, tiny hops",
         "5 standard night run",
         "6 mid flow, ledges appear",
-        "7 pressure on, spikes allowed",
+        "7 a gap or one rare spike is allowed",
         "8 hard — wide gaps if dash ready",
-        "9 punish window, hunter cuts off",
-        "10 peak heat — only hp=3 and hunterDist<220",
+        "9 punish window — gaps, not a spike wall",
+        "10 peak heat — only hp=3 and score already high",
       ],
     };
     questions.event_beat = {
       type: "choice",
-      instructions: `Optional set-piece that MUST change the next screen if not none. Prefer none when lastEvent!=none, hp=1 (except calm_breather), or score<80. ambush_spike_run if hp>=2 and dash ready. orb_fountain if hurts>0 or hp<=2. narrow_gauntlet if dash ready and hp>=2. calm_breather if hp=1 or hurts>=2.`,
+      instructions: `Optional set-piece that MUST change the next screen if not none. Prefer none when lastEvent!=none, hp=1 (except calm_breather), or score<80. Prefer orb_fountain or calm_breather. ambush_spike_run only rarely if hp=3 and dash ready. narrow_gauntlet if dash ready and hp>=2. calm_breather if hp=1 or hurts>=2.`,
       criteria: {
         none: "No set-piece — keep composing normal slabs",
-        ambush_spike_run: "Two spike slabs slam in — magenta sting. Need hp>=2",
+        ambush_spike_run: "One short spike slab — rare magenta sting. Need hp=3",
         orb_fountain: "Arc of extra orbs, a visible gift",
         narrow_gauntlet: "Three stub ledges with hops — dash check",
-        calm_breather: "Long safe slab, hunter should retreat",
+        calm_breather: "Long safe slab, a breather",
       },
     };
     questions.juice_cue = {

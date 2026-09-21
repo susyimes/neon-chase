@@ -1,16 +1,18 @@
 # Neon Chase / 霓虹追影
 
-Endless side-scrolling runner. You run, jump, and dash. **TypeSafe Jev** (System One) does not write text or draw art — it only returns structured Choice / Score / Noul answers that compose the next street, pick a set-piece, and steer the hunter.
+Endless side-scrolling runner. You run, jump, and dash. **TypeSafe Jev** (System One) does not write text or draw art — it only returns structured Choice / Score / Noul answers that compose the next street and pick a set-piece.
 
-无尽横版跑酷。玩家奔跑、跳跃、冲刺。**TypeSafe Jev**（System One）不生成文案或美术，只从固定选项里返回结构化 Choice / Score / Noul，用来铺前方地形、触发可见事件并驱动追猎 AI。
+无尽横版跑酷。玩家奔跑、跳跃、冲刺。**TypeSafe Jev**（System One）不生成文案或美术，只从固定选项里返回结构化 Choice / Score / Noul，用来铺前方地形并触发可见事件。
+
+This build is a **calmer runner**: hunters / 追兵 are disabled in gameplay (`HUNTERS_ENABLED = false` in `client/src/config.ts`). Pressure comes from scrolling terrain and occasional obstacles. Spike density is throttled to about **1/3 or less** of the previous rules (`SPIKE_SURFACE_KEEP`, `SPIKE_NUB_KEEP`).
 
 Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF) (BV1q843z1EgF): constrained cyan/magenta grade, shared L-corner chrome on title/HUD/game-over, cool fog vs warm neon, parallax city, quiet Jev whisper, distinct confirm/back/tick/hold SFX, faded overlay transitions, contextual particles, land/hurt squash, and one geometric-neon direction — not more features.
 
 ## Play / 怎么玩
 
 - **Goal:** survive, collect cyan orbs, score from distance + orbs + chain bonus.
-- **Hazards:** gaps, magenta spikes, the hunter, decoy lips when Jev asks for a fake-out.
-- **HP:** 3. Spikes / hunter / falling off cost 1 HP (brief i-frames). 0 HP → game over.
+- **Hazards:** gaps, occasional magenta spikes, decoy lips when Jev asks for a fake-out. No pursuing hunters.
+- **HP:** 3. Spikes / falling off cost 1 HP (brief i-frames). 0 HP → game over.
 - **Juice:** hit-stop, camera shake, neon particles, land squash, dash trails, combo pops.
 - **Audio:** procedural Web Audio pad + one-shots. Mute persists in `localStorage` (`M` or the LIVE/MUTE chip). Music ducks when you get hit.
 
@@ -56,9 +58,9 @@ npm run dev:server
 npm run dev:client
 ```
 
-Without a key, or if Jev errors / exceeds **800ms**, the game keeps running on **safe flat ground**, a hunter that simply chases, **no set-piece**, and a hush juice cue. The HUD shows a non-blocking warning.
+Without a key, or if Jev errors / exceeds **800ms**, the game keeps running on **safe flat ground**, **no set-piece**, and a hush juice cue. The HUD shows a non-blocking warning.
 
-没有 Key、接口报错或超过 **800ms** 时，游戏不会卡死：用地形兜底（平坦安全地面）和“追赶”猎人，不触发事件，HUD 会显示一条不打断操作的警告。
+没有 Key、接口报错或超过 **800ms** 时，游戏不会卡死：用地形兜底（平坦安全地面），不触发事件，HUD 会显示一条不打断操作的警告。
 
 ## What Jev does / Jev 做什么
 
@@ -68,7 +70,7 @@ The browser **never** sees `TYPESAFE_API_KEY`. It posts compact game state to th
 
 Pinned model: **`jev-1.13.0`**.
 
-All questions in one `systemone` call run **in parallel**. Terrain prefetch (2 segments) piggy-backs the hunter questions when a tick is due. A hunter-only tick sends only the hunter block.
+All questions in one `systemone` call run **in parallel**. The client prefetches 2 terrain segments and does **not** ask Jev for hunter decisions while `HUNTERS_ENABLED` is false. Hunter question ids below stay in the proxy for the unused path.
 
 ### Compact state
 
@@ -84,7 +86,7 @@ All questions in one `systemone` call run **in parallel**. Terrain prefetch (2 s
 }
 ```
 
-`dist` is player X minus hunter X. `hurts` is a death-pressure proxy (times hit this run). Instructions on each question are **state-conditioned** from these fields.
+`hunter` is still sent so the proxy schema stays valid; with hunters off the client stubs `dist` as far away. `hurts` is a death-pressure proxy (times hit this run). Instructions on each question are **state-conditioned** from these fields.
 
 ### Question → gameplay map
 
@@ -101,20 +103,20 @@ Every answer is consumed. Fallback fills each field deterministically when the k
 | `hazard_density` | Choice | `low` \| `mid` \| `high` | Extra spike nubs on otherwise-safe slabs |
 | `orb_style` | Choice | `trail` \| `cluster` \| `high_risk` | Orb layout (line / triangle / over gaps) |
 | `fakeout` | Choice | `yes` \| `no` | Decoy lip: glow wider than the collider |
-| `flow` | Score (9 levels → **2–10**) | recovery … peak heat | Hunter pressure + HUD “flow” |
+| `flow` | Score (9 levels → **2–10**) | recovery … peak heat | HUD “flow” |
 | `event_beat` | Choice | `none` \| `ambush_spike_run` \| `orb_fountain` \| `narrow_gauntlet` \| `calm_breather` | Visible set-piece prepended to the slice |
 | `juice_cue` | Choice | `pulse` \| `drop` \| `rise` \| `sting` \| `hush` | SFX + VFX accent for this beat |
-| `hunter_stance` | Choice | `pressure` \| `bait` \| `cut_off` \| `retreat` | Maps to chase / bait / jump / hold plus new spacing |
-| `hunter_feint` | Noul | true/false statements | If `noul > 0.55`, hunter fakes the opposite way first |
-| `hunter_aggression` | Score (5 levels) | hover … relentless | Scales chase speed (0.2–1.0) |
-| `hunter_vertical` | Choice | `above` \| `level` \| `below` | Preferred height vs the runner |
+| `hunter_stance` | Choice | `pressure` \| `bait` \| `cut_off` \| `retreat` | Unused in gameplay while hunters are off |
+| `hunter_feint` | Noul | true/false statements | Unused in gameplay while hunters are off |
+| `hunter_aggression` | Score (5 levels) | hover … relentless | Unused in gameplay while hunters are off |
+| `hunter_vertical` | Choice | `above` \| `level` \| `below` | Unused in gameplay while hunters are off |
 
 **Event beats (must change the next screen if not `none`):**
 
-- `ambush_spike_run` — two spike slabs slam in + sting juice
+- `ambush_spike_run` — one short spike slab + sting juice (was two slabs)
 - `orb_fountain` — arc of extra orbs
 - `narrow_gauntlet` — three stub ledges with hops
-- `calm_breather` — long safe slab (hunter instructions prefer retreat)
+- `calm_breather` — long safe slab
 - `none` — compose only the segment answers
 
 Score `flow` uses an ordered 9-level `criteria` array (System One indices 0–8). The proxy maps `round(score) + 2` onto difficulty **2–10**.
@@ -156,9 +158,8 @@ Score `flow` uses an ordered 9-level `criteria` array (System One indices 0–8)
 ### Game loop
 
 - Physics and render stay at ~60fps in Phaser. Jev is **never** awaited on the update loop.
-- When the terrain buffer drops below ~2 screens, the client prefetches 2 segments (and piggy-backs hunter questions when a tick is due).
-- Hunter AI ticks about every **400ms**. Between ticks the sprite interpolates toward the last target; a feint offsets the first ~160ms.
-- HUD: score, HP, combo chain, last Jev latency, source, motif, hunter stance, flow. Event banners appear when a set-piece is live. Call count is on the game-over panel.
+- When the terrain buffer drops below ~2 screens, the client prefetches 2 segments. Hunter ticks stay off unless `HUNTERS_ENABLED` is flipped back on.
+- HUD: score, HP, combo chain, last Jev latency, source, motif, flow. Event banners appear when a set-piece is live. Call count is on the game-over panel.
 
 ## Layout
 

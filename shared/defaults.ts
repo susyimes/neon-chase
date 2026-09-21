@@ -22,6 +22,13 @@ export const SAFE_HUNTER: HunterTactics = {
   vertical: "level",
 };
 
+/** Stub hunter snapshot so the proxy still accepts compact state. Dist is "far". */
+export const DISABLED_HUNTER_STATE = {
+  x: 0,
+  aggression: 0,
+  dist: 9999,
+} as const;
+
 export function safeDirector(
   extras: {
     hunter?: boolean;

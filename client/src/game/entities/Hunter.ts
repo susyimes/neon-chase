@@ -2,6 +2,8 @@ import Phaser from "phaser";
 import type { HunterMove, HunterTactics, HunterVertical } from "@shared/types.ts";
 import { HUNTER_TICK_MS } from "../../config.ts";
 
+/** Sprite + tactics. PlayScene only constructs this when `HUNTERS_ENABLED` is true. */
+
 export class Hunter {
   move: HunterMove = "chase";
   stance: HunterTactics["stance"] = "pressure";

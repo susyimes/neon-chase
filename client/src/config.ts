@@ -11,6 +11,16 @@ export const DASH_MS = 160;
 export const DASH_COOLDOWN_MS = 700;
 export const IFRAME_MS = 900;
 export const HUNTER_TICK_MS = 400;
+/** Hunter sprite, AI ticks, collision, and near-miss urgency. Off for the calm runner. */
+export const HUNTERS_ENABLED = false;
+/**
+ * Spike keep rates vs the previous spawn rules (about 1/3 or less).
+ * Surfaces: keep every Nth Jev spike slab (`1 / SPIKE_SURFACE_KEEP`).
+ * Extra nubs: at most one tooth, and only every Nth eligible slab.
+ * Ambush set-piece: one 3-tile spike instead of two slabs (5+3 tiles).
+ */
+export const SPIKE_SURFACE_KEEP = 1 / 3;
+export const SPIKE_NUB_KEEP = 1 / 3;
 export const JEV_TIMEOUT_MS = 800;
 export const BUFFER_SCREENS = 2;
 export const TERRAIN_BATCH = 2;
