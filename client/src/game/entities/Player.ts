@@ -7,6 +7,7 @@ import {
   DASH_MS,
   DASH_V,
   IFRAME_MS,
+  REMAKE_IFRAME_MS,
   JUMP_BUFFER_MS,
   JUMP_V,
   MAX_HP,
@@ -95,7 +96,7 @@ export class Player {
     this.sprite.setPosition(x, y);
     this.sprite.setVelocity(AUTO_RUN, 0);
     this.maxX = Math.max(this.maxX, x);
-    this.invulnUntil = this.sprite.scene.time.now + 1400;
+    this.invulnUntil = this.sprite.scene.time.now + REMAKE_IFRAME_MS;
     this.scaleX = 1;
     this.scaleY = 1;
   }

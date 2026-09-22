@@ -9,14 +9,22 @@ This build is a **calmer runner**: hunters / 追兵 are disabled in gameplay (`H
 Walkable platforms (solids, ledges, gauntlet steps, fake-out colliders) last **~1 second** at auto-run. Formula in `shared/pads.ts` and `client/src/config.ts`:
 
 `WALKABLE_PAD_PX = AUTO_RUN × WALKABLE_PAD_SECONDS` → `230 × 1.0 = 230px`  
-`WALKABLE_PAD_TILES = ceil(230 / TILE)` → `ceil(230 / 40) = 6` tiles (240px ≈ **1.04s**). Jev width choices are `6 | 8 | 10`. Gaps stay short; spike slabs are not stretched. Open `?pads=1` to paint tile/dwell labels while playtesting.
+`WALKABLE_PAD_TILES = ceil(230 / TILE)` → `ceil(230 / 40) = 6` tiles (240px ≈ **1.04s**). Jev width choices are `6 | 8 | 10`. Spike slabs are not stretched. Open `?pads=1` to paint tile/dwell labels while playtesting.
+
+Pit / gap cadence lives in `shared/pits.ts` and is applied when the street is built (`TerrainWorld`):
+
+- **2s safe runway** after AGAIN / Enter (no pits), plus ~1.6s spawn i-frames against spikes.
+- **Early** (~2–12s): sparse 2-tile pits (~every 5s).
+- **Mid** (~12–28s) / **late**: denser 2-tile pits so a missed jump ends the run.
+- Authored 1-tile hops can still appear; a 1-tile hole is coyote-walkable, so injected death pits are always **2 tiles (80px)**.
+- Gaps stay `0 | 1 | 2`. Spike keep-rates (`SPIKE_SURFACE_KEEP`, `SPIKE_NUB_KEEP`) are unchanged.
 
 Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF) (BV1q843z1EgF): constrained cyan/magenta grade, shared L-corner chrome on title/HUD/game-over, cool fog vs warm neon, parallax city, quiet Jev whisper, distinct confirm/back/tick/hold SFX, faded overlay transitions, contextual particles, land/hurt squash, and one geometric-neon direction — not more features.
 
 ## Play / 怎么玩
 
 - **Goal:** survive, collect cyan orbs, score from distance + orbs + chain bonus.
-- **Hazards:** gaps, occasional magenta spikes, decoy lips when Jev asks for a fake-out. No pursuing hunters.
+- **Hazards:** readable pits/gaps (sparse early, denser mid/late), occasional magenta spikes, decoy lips when Jev asks for a fake-out. No pursuing hunters.
 - **HP:** 3. Spikes cost 1 HP (brief i-frames). Falling off the world ends the run. **AGAIN** / Enter starts a fresh run from the opening street.
 - **Juice:** hit-stop, camera shake, neon particles, land squash, dash trails, combo pops.
 - **Audio:** procedural Web Audio pad + one-shots. Mute persists in `localStorage` (`M` or the LIVE/MUTE chip). Music ducks when you get hit.
@@ -63,9 +71,9 @@ npm run dev:server
 npm run dev:client
 ```
 
-Without a key, or if Jev errors / exceeds **800ms**, the game keeps running on **safe flat ground**, **no set-piece**, and a hush juice cue. The HUD shows a non-blocking warning.
+Without a key, or if Jev errors / exceeds **800ms**, the game keeps running on **local paced streets** (same pit cadence as the client), **no set-piece**, and a hush juice cue. The HUD shows a non-blocking warning.
 
-没有 Key、接口报错或超过 **800ms** 时，游戏不会卡死：用地形兜底（平坦安全地面），不触发事件，HUD 会显示一条不打断操作的警告。
+没有 Key、接口报错或超过 **800ms** 时，游戏不会卡死：用本地节奏地面兜底（仍有可控落差），不触发事件，HUD 会显示一条不打断操作的警告。
 
 ## What Jev does / Jev 做什么
 

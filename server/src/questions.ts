@@ -96,11 +96,11 @@ export function buildJevBody(
       };
       questions[`${p}gap`] = {
         type: "choice",
-        instructions: `Empty tiles after the ${nth} platform. Prefer 0 if previous encoding was a gap or hp=1.`,
+        instructions: `Empty tiles after the ${nth} platform. ${snap}. Opening/recovery (score<60 or hp=1): prefer 0, rare 1. Early (score<160): mix 0 and 1, occasional 2. Mid/late (score>=160): prefer 1–2 so a missed jump can end the run. Never stack two 2-gaps. The client still enforces a 2s safe runway and spacing.`,
         criteria: {
-          "0": "Seamless continue",
-          "1": "Small hop",
-          "2": "Committed jump — only if dash ready or hp>=2",
+          "0": "Seamless continue — opening runway or right after a hole",
+          "1": "Tiny hop — readable lip, coyote may save it",
+          "2": "Committed pit — 80px hole, must jump; the usual mid/late tax",
         },
       };
       questions[`${p}height`] = {
@@ -121,9 +121,9 @@ export function buildJevBody(
       type: "choice",
       instructions: `Composer rhythm for this slice. ${snap}. easy if hp=1 or hurts>=2; build if score climbing and hp>=2; punish only if hp=3, dash ready, and the last slice was easy or build.`,
       criteria: {
-        easy: "Recovery sidewalk — solids, tiny gaps",
-        build: "Teach then tax — mix ledges, one mild threat",
-        punish: "A wider gap or one rare spike — never a wall of teeth",
+        easy: "Recovery sidewalk — solids, sparse readable pits",
+        build: "Teach then tax — mix ledges, a 2-tile pit",
+        punish: "A 2-tile pit or one rare spike — never a wall of teeth",
       },
     };
     questions.motif = {

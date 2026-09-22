@@ -62,7 +62,7 @@ export class JevService {
         latencyMs: data.latencyMs ?? Math.round(performance.now() - started),
       };
     } catch {
-      const fallback = localFallback(req, "Jev timeout or network error — safe terrain");
+      const fallback = localFallback(req, "Jev timeout or network error — local terrain");
       this.lastSource = fallback.source;
       this.warning = fallback.warning ?? null;
       return fallback;

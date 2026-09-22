@@ -1,19 +1,14 @@
 import { safeDirector } from "@shared/defaults.ts";
-import { WALKABLE_PAD_TILES } from "@shared/pads.ts";
+import { pacedSolidSpecs } from "@shared/pits.ts";
 import type {
   DecideRequest,
   DecideResponse,
   TerrainSegmentSpec,
 } from "@shared/types.ts";
 
-export function safeSpecs(count: number): TerrainSegmentSpec[] {
-  const n = Math.max(1, Math.min(16, Math.floor(count)));
-  return Array.from({ length: n }, () => ({
-    surface: "solid" as const,
-    width: WALKABLE_PAD_TILES,
-    gap: 0 as const,
-    height: 5 as const,
-  }));
+/** Opening street + local fallback. Cadence-shaped pits live in `shared/pits.ts`. */
+export function safeSpecs(count: number, fromX = 0): TerrainSegmentSpec[] {
+  return pacedSolidSpecs(count, fromX);
 }
 
 export function localFallback(req: DecideRequest, warning: string): DecideResponse {
@@ -25,7 +20,7 @@ export function localFallback(req: DecideRequest, warning: string): DecideRespon
     latencyMs: 0,
     warning,
     error: warning,
-    terrain: n > 0 ? safeSpecs(n) : [],
+    terrain: n > 0 ? safeSpecs(n, req.state?.player?.x ?? 0) : [],
     hunterMove: wantHunter ? "chase" : undefined,
     director: safeDirector({
       hunter: wantHunter,

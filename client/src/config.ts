@@ -17,6 +17,8 @@ export const DASH_V = 520;
 export const DASH_MS = 160;
 export const DASH_COOLDOWN_MS = 700;
 export const IFRAME_MS = 900;
+/** Brief spawn i-frames after AGAIN / Enter remake (spikes only — pits stay lethal). */
+export const REMAKE_IFRAME_MS = 1600;
 export const HUNTER_TICK_MS = 400;
 /** Hunter sprite, AI ticks, collision, and near-miss urgency. Off for the calm runner. */
 export const HUNTERS_ENABLED = false;
@@ -25,6 +27,8 @@ export const HUNTERS_ENABLED = false;
  * Surfaces: keep every Nth Jev spike slab (`1 / SPIKE_SURFACE_KEEP`).
  * Extra nubs: at most one tooth, and only every Nth eligible slab.
  * Ambush set-piece: one 3-tile spike instead of two slabs (5+3 tiles).
+ * Do not raise these — pit cadence is the intended death pressure
+ * (`shared/pits.ts`).
  */
 export const SPIKE_SURFACE_KEEP = 1 / 3;
 export const SPIKE_NUB_KEEP = 1 / 3;

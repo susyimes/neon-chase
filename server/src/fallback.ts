@@ -1,5 +1,5 @@
 import { safeDirector } from "../../shared/defaults.ts";
-import { WALKABLE_PAD_TILES } from "../../shared/pads.ts";
+import { pacedSolidSpecs } from "../../shared/pits.ts";
 import type {
   DecideRequest,
   DecideResponse,
@@ -7,15 +7,10 @@ import type {
   TerrainSegmentSpec,
 } from "../../shared/types.ts";
 
-/** Safe flat ground used when Jev is missing, slow, or errors. */
-export function safeTerrain(count: number): TerrainSegmentSpec[] {
+/** Local street when Jev is missing, slow, or errors. Pits follow `shared/pits.ts`. */
+export function safeTerrain(count: number, fromX = 0): TerrainSegmentSpec[] {
   const n = Math.max(1, Math.min(3, Math.floor(count)));
-  return Array.from({ length: n }, () => ({
-    surface: "solid" as const,
-    width: WALKABLE_PAD_TILES,
-    gap: 0 as const,
-    height: 5 as const,
-  }));
+  return pacedSolidSpecs(n, fromX);
 }
 
 export function safeHunterMove(): HunterMove {
@@ -40,7 +35,7 @@ export function fallbackResult(
     latencyMs: Date.now() - started,
     warning,
     error: warning,
-    terrain: n > 0 ? safeTerrain(n) : [],
+    terrain: n > 0 ? safeTerrain(n, req.state?.player?.x ?? 0) : [],
     hunterMove: wantHunter ? safeHunterMove() : undefined,
     director,
   };

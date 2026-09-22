@@ -70,7 +70,7 @@ export async function decide(req: DecideRequest): Promise<DecideResponse> {
 
   const key = process.env.TYPESAFE_API_KEY?.trim();
   if (!key) {
-    return fallbackResult(req, started, "No TYPESAFE_API_KEY — using safe terrain");
+    return fallbackResult(req, started, "No TYPESAFE_API_KEY — using local terrain");
   }
 
   const body = buildJevBody(req.state, {
@@ -132,7 +132,7 @@ export async function decide(req: DecideRequest): Promise<DecideResponse> {
   } catch (error) {
     const message =
       error instanceof Error && error.name === "AbortError"
-        ? "Jev timed out — using safe terrain"
+        ? "Jev timed out — using local terrain"
         : `Jev request failed — ${error instanceof Error ? error.message : "error"}`;
     return fallbackResult(req, started, message);
   }

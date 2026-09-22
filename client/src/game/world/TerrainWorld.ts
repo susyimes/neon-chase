@@ -2,10 +2,12 @@ import Phaser from "phaser";
 import type {
   DirectorPlan,
   EventBeat,
+  GapChoice,
   MotifKind,
   TerrainSegmentSpec,
 } from "@shared/types.ts";
 import { walkableDwellSeconds, walkableWidthPx, WALKABLE_PAD_TILES } from "@shared/pads.ts";
+import { shapeGap } from "@shared/pits.ts";
 import {
   AUTO_RUN,
   DEBUG_PAD_LABELS,
@@ -15,7 +17,7 @@ import {
   SPIKE_SURFACE_KEEP,
   TILE,
 } from "../../config.ts";
-import { MOTIF_PALETTES } from "../../palette.ts";
+import { MOTIF_PALETTES, type MotifPalette } from "../../palette.ts";
 
 export interface BuiltSegment {
   spec: TerrainSegmentSpec;
@@ -40,6 +42,10 @@ export class TerrainWorld {
   lastEvent: EventBeat = "none";
   private spikeSurfaceSeen = 0;
   private nubCandidates = 0;
+  /** World X of the last pit's trailing pad lip. Cadence clock for `shapeGap`. */
+  private lastPitLipX = 0;
+  /** Next pad should paint a landing-lip highlight (previous slice ended in a hole). */
+  private pendingLandingLip = false;
 
   constructor(private readonly scene: Phaser.Scene) {
     this.platforms = scene.physics.add.staticGroup();
@@ -144,7 +150,12 @@ export class TerrainWorld {
     this.scene.physics.add.existing(body, true);
     this.platforms.add(body);
     const objects: Phaser.GameObjects.GameObject[] = [glow, body, lip];
-    this.paintPadLabel(objects, startX, platformY, width, "ledge");
+    if (this.pendingLandingLip) this.paintLandingLip(objects, startX, platformY, 16, pal);
+    this.paintApproachWarn(objects, startX, width, platformY, 16, pal);
+    this.paintPit(objects, startX + width, TILE, platformY, pal);
+    this.lastPitLipX = startX + width;
+    this.pendingLandingLip = true;
+    this.paintPadLabel(objects, startX, platformY, width, "ledge", 1);
     this.cursorX = startX + width + TILE;
     this.segments.push({
       spec: { surface: "ledge", width: WALKABLE_PAD_TILES, gap: 1, height: 6 },
@@ -171,20 +182,22 @@ export class TerrainWorld {
     const tiles = Math.round(width / TILE);
     const thickness = surface === "ledge" ? 14 : 22;
     const platformY = GAME_HEIGHT - spec.height * TILE;
-    const color = surface === "spike" ? 0x4a1838 : pal.plat;
+    const lipX = startX + width;
+    const gapTiles: GapChoice = fromEvent ? clampAuthoredGap(spec.gap) : shapeGap(spec.gap, lipX, this.lastPitLipX);
+    const color = surface === "spike" ? 0x2a0818 : pal.plat;
     const edge = surface === "spike" ? pal.spike : pal.platEdge;
 
     const glow = this.scene.add
-      .rectangle(startX - 8, platformY - 8, width + 16, 20, edge, 0.32)
+      .rectangle(startX - 8, platformY - 8, width + 16, 20, edge, surface === "spike" ? 0.5 : 0.32)
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.ADD);
     const body = this.scene.add.rectangle(startX, platformY, width, thickness, color).setOrigin(0, 0);
     const face = this.scene.add
-      .rectangle(startX, platformY + 3, width, thickness - 3, 0x000000, 0.22)
+      .rectangle(startX, platformY + 3, width, thickness - 3, surface === "spike" ? 0x14040c : 0x000000, surface === "spike" ? 0.35 : 0.22)
       .setOrigin(0, 0);
     const lip = this.scene.add.rectangle(startX, platformY, width, 4, edge, 1).setOrigin(0, 0);
     const sheen = this.scene.add
-      .rectangle(startX, platformY + 4, width, 2, 0xffffff, 0.18)
+      .rectangle(startX, platformY + 4, width, 2, 0xffffff, surface === "spike" ? 0.08 : 0.18)
       .setOrigin(0, 0)
       .setBlendMode(Phaser.BlendModes.ADD);
     const under = this.scene.add
@@ -195,7 +208,10 @@ export class TerrainWorld {
 
     const objects: Phaser.GameObjects.GameObject[] = [glow, body, face, lip, sheen, under];
 
-    this.paintPadLabel(objects, startX, platformY, width, surface);
+    if (this.pendingLandingLip) this.paintLandingLip(objects, startX, platformY, thickness, pal);
+    if (surface === "spike") this.paintSpikeSlab(objects, startX, width, platformY, thickness, pal);
+
+    this.paintPadLabel(objects, startX, platformY, width, surface, gapTiles);
 
     if (surface === "spike") {
       const count = tiles;
@@ -214,13 +230,22 @@ export class TerrainWorld {
       }
     }
 
-    this.placeOrbs({ ...spec, surface, width: tiles }, source, startX, width, platformY, plan, fromEvent, objects);
+    this.placeOrbs({ ...spec, surface, width: tiles, gap: gapTiles }, source, startX, width, platformY, plan, fromEvent, objects);
 
-    const gap = spec.gap * TILE;
+    if (gapTiles > 0) {
+      this.paintApproachWarn(objects, startX, width, platformY, thickness, pal);
+      this.paintPit(objects, lipX, gapTiles * TILE, platformY, pal);
+      this.lastPitLipX = lipX;
+      this.pendingLandingLip = true;
+    } else {
+      this.pendingLandingLip = false;
+    }
+
+    const gap = gapTiles * TILE;
     const endX = startX + width + gap;
     this.cursorX = endX;
     this.segments.push({
-      spec: { ...spec, surface, width: tiles },
+      spec: { ...spec, surface, width: tiles, gap: gapTiles },
       source,
       startX,
       endX,
@@ -237,12 +262,14 @@ export class TerrainWorld {
     platformY: number,
     width: number,
     surface: TerrainSegmentSpec["surface"],
+    gapTiles = 0,
   ): void {
     if (!DEBUG_PAD_LABELS || surface === "spike") return;
     const tiles = Math.round(width / TILE);
     const dwell = walkableDwellSeconds(width, AUTO_RUN);
+    const pit = gapTiles > 0 ? ` · pit${gapTiles}` : "";
     const label = this.scene.add
-      .text(startX + 8, platformY - 18, `${tiles}t · ${dwell.toFixed(2)}s`, {
+      .text(startX + 8, platformY - 18, `${tiles}t · ${dwell.toFixed(2)}s${pit}`, {
         fontFamily: "monospace",
         fontSize: "11px",
         color: "#7ef9ff",
@@ -261,17 +288,155 @@ export class TerrainWorld {
     return this.spikeSurfaceSeen % period === 0 ? "spike" : "solid";
   }
 
+  private paintPit(
+    objects: Phaser.GameObjects.GameObject[],
+    lipX: number,
+    gapPx: number,
+    platformY: number,
+    pal: MotifPalette,
+  ): void {
+    const wellH = GAME_HEIGHT - platformY + 18;
+    const voidInk = this.scene.add
+      .rectangle(lipX, platformY, gapPx, wellH, 0x050308, 0.94)
+      .setOrigin(0, 0)
+      .setDepth(3);
+    const wash = this.scene.add
+      .rectangle(lipX, platformY, gapPx, Math.min(56, wellH), pal.accent, 0.16)
+      .setOrigin(0, 0)
+      .setDepth(3)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const rail = this.scene.add
+      .rectangle(lipX, platformY, gapPx, 3, pal.accent, 0.85)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    objects.push(voidInk, wash, rail);
+
+    const step = 14;
+    for (let x = lipX + 6; x < lipX + gapPx - 6; x += step) {
+      const chevron = this.scene.add
+        .triangle(x + 5, platformY + 16, 0, 0, 10, 0, 5, 11, pal.accent, 0.72)
+        .setDepth(4);
+      this.scene.tweens.add({
+        targets: chevron,
+        alpha: { from: 0.28, to: 0.88 },
+        y: { from: platformY + 14, to: platformY + 22 },
+        duration: 420,
+        yoyo: true,
+        repeat: -1,
+      });
+      objects.push(chevron);
+    }
+
+    const leftCliff = this.scene.add
+      .rectangle(lipX - 5, platformY - 7, 6, 18, pal.platEdge, 1)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    const leftGlow = this.scene.add
+      .rectangle(lipX - 12, platformY - 12, 16, 26, pal.platEdge, 0.42)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4);
+    const rightCliff = this.scene.add
+      .rectangle(lipX + gapPx - 1, platformY - 7, 6, 18, pal.platEdge, 1)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    const rightGlow = this.scene.add
+      .rectangle(lipX + gapPx - 4, platformY - 12, 16, 26, pal.platEdge, 0.42)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4);
+    objects.push(leftCliff, leftGlow, rightCliff, rightGlow);
+  }
+
+  private paintApproachWarn(
+    objects: Phaser.GameObjects.GameObject[],
+    startX: number,
+    width: number,
+    platformY: number,
+    thickness: number,
+    pal: MotifPalette,
+  ): void {
+    const zoneW = Math.min(TILE, width * 0.35);
+    const zone = this.scene.add
+      .rectangle(startX + width - zoneW, platformY, zoneW, thickness, 0x1a0810, 0.62)
+      .setOrigin(0, 0)
+      .setDepth(3);
+    const hash = this.scene.add
+      .rectangle(startX + width - zoneW, platformY, zoneW, 4, pal.accent, 0.95)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    objects.push(zone, hash);
+  }
+
+  private paintLandingLip(
+    objects: Phaser.GameObjects.GameObject[],
+    startX: number,
+    platformY: number,
+    thickness: number,
+    pal: MotifPalette,
+  ): void {
+    const lip = this.scene.add
+      .rectangle(startX - 2, platformY - 7, 8, thickness + 12, pal.platEdge, 1)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    const glow = this.scene.add
+      .rectangle(startX - 8, platformY - 12, 18, thickness + 20, pal.platEdge, 0.38)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4);
+    objects.push(lip, glow);
+  }
+
+  private paintSpikeSlab(
+    objects: Phaser.GameObjects.GameObject[],
+    startX: number,
+    width: number,
+    platformY: number,
+    thickness: number,
+    pal: MotifPalette,
+  ): void {
+    const rail = this.scene.add
+      .rectangle(startX, platformY - 3, width, 5, pal.spike, 1)
+      .setOrigin(0, 0)
+      .setDepth(4);
+    const pulse = this.scene.add
+      .rectangle(startX - 6, platformY - 10, width + 12, thickness + 16, pal.spike, 0.28)
+      .setOrigin(0, 0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(3);
+    this.scene.tweens.add({
+      targets: pulse,
+      alpha: { from: 0.18, to: 0.55 },
+      duration: 360,
+      yoyo: true,
+      repeat: -1,
+    });
+    objects.push(rail, pulse);
+  }
+
   private spikeAt(sx: number, platformY: number, color: number): Phaser.GameObjects.GameObject[] {
     const glow = this.scene.add
-      .triangle(sx, platformY + 2, 0, 20, 9, 0, 18, 20, color, 0.28)
+      .triangle(sx, platformY + 2, 0, 24, 10, 0, 20, 24, color, 0.42)
       .setOrigin(0.5, 1)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    const spike = this.scene.add.triangle(sx, platformY, 0, 16, 8, 0, 16, 16, color);
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4);
+    this.scene.tweens.add({
+      targets: glow,
+      alpha: { from: 0.28, to: 0.75 },
+      duration: 340,
+      yoyo: true,
+      repeat: -1,
+    });
+    const spike = this.scene.add.triangle(sx, platformY, 0, 18, 8, 0, 16, 18, color);
     spike.setOrigin(0.5, 1);
+    spike.setDepth(5);
+    const tip = this.scene.add.triangle(sx, platformY - 8, 0, 8, 4, 0, 8, 8, 0xffe6fb, 0.95);
+    tip.setOrigin(0.5, 1);
+    tip.setDepth(5);
     const hit = this.scene.add.rectangle(sx, platformY - 8, 14, 14, color, 0);
     this.scene.physics.add.existing(hit, true);
     this.spikes.add(hit);
-    return [glow, spike, hit];
+    return [glow, spike, tip, hit];
   }
 
   private placeOrbs(
@@ -351,4 +516,8 @@ export class TerrainWorld {
     });
     return orb;
   }
+}
+
+function clampAuthoredGap(value: number): GapChoice {
+  return value === 1 || value === 2 ? value : 0;
 }
