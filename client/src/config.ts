@@ -1,4 +1,10 @@
 import {
+  JUMP_BUFFER_MS as SHARED_JUMP_BUFFER_MS,
+  JUMP_COYOTE_MS,
+  JUMP_GRAVITY,
+  JUMP_VELOCITY,
+} from "@shared/jump.ts";
+import {
   WALKABLE_PAD_AUTO_RUN,
   WALKABLE_PAD_SECONDS as SHARED_PAD_SECONDS,
   WALKABLE_PAD_TILE_PX,
@@ -11,8 +17,8 @@ export const TILE = 40;
 
 export const AUTO_RUN = 230;
 export const STRAFE = 170;
-export const JUMP_V = -520;
-export const GRAVITY = 1500;
+export const JUMP_V = JUMP_VELOCITY;
+export const GRAVITY = JUMP_GRAVITY;
 export const DASH_V = 520;
 export const DASH_MS = 160;
 export const DASH_COOLDOWN_MS = 700;
@@ -47,11 +53,20 @@ export const WALKABLE_PAD_TILES = Math.max(
 /** `?pads=1` paints tile-count + dwell labels on each built pad (playtest). */
 export const DEBUG_PAD_LABELS =
   typeof window !== "undefined" && new URLSearchParams(window.location.search).has("pads");
+/** `?pits=1` logs the cadence dump and paints pit widths on holes. */
+export const DEBUG_PIT_DUMP =
+  typeof window !== "undefined" && new URLSearchParams(window.location.search).has("pits");
 
 if (AUTO_RUN !== WALKABLE_PAD_AUTO_RUN || TILE !== WALKABLE_PAD_TILE_PX) {
   console.warn(
     `[pads] AUTO_RUN/TILE (${AUTO_RUN}/${TILE}) drifted from shared/pads.ts ` +
       `(${WALKABLE_PAD_AUTO_RUN}/${WALKABLE_PAD_TILE_PX}). Client clamp still uses local speed.`,
+  );
+}
+if (JUMP_V !== JUMP_VELOCITY || GRAVITY !== JUMP_GRAVITY) {
+  console.warn(
+    `[jump] JUMP_V/GRAVITY (${JUMP_V}/${GRAVITY}) drifted from shared/jump.ts ` +
+      `(${JUMP_VELOCITY}/${JUMP_GRAVITY}).`,
   );
 }
 export const JEV_TIMEOUT_MS = 800;
@@ -60,8 +75,8 @@ export const TERRAIN_BATCH = 2;
 export const MAX_HP = 3;
 export const ORB_SCORE = 50;
 
-export const COYOTE_MS = 90;
-export const JUMP_BUFFER_MS = 110;
+export const COYOTE_MS = JUMP_COYOTE_MS;
+export const JUMP_BUFFER_MS = SHARED_JUMP_BUFFER_MS;
 export const DASH_BUFFER_MS = 80;
 export const COMBO_WINDOW_MS = 1700;
 export const COMBO_BONUS = 12;

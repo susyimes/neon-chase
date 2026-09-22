@@ -1,14 +1,17 @@
 import { safeDirector } from "@shared/defaults.ts";
-import { pacedSolidSpecs } from "@shared/pits.ts";
+import { blankSolidSpecs } from "@shared/pits.ts";
 import type {
   DecideRequest,
   DecideResponse,
   TerrainSegmentSpec,
 } from "@shared/types.ts";
 
-/** Opening street + local fallback. Cadence-shaped pits live in `shared/pits.ts`. */
-export function safeSpecs(count: number, fromX = 0): TerrainSegmentSpec[] {
-  return pacedSolidSpecs(count, fromX);
+/**
+ * Opening street + local fallback. Specs stay gap-0; `TerrainWorld.shapeGap`
+ * is the cadence clock so later batches do not reset `lastPit` to 0.
+ */
+export function safeSpecs(count: number): TerrainSegmentSpec[] {
+  return blankSolidSpecs(count);
 }
 
 export function localFallback(req: DecideRequest, warning: string): DecideResponse {
@@ -20,7 +23,7 @@ export function localFallback(req: DecideRequest, warning: string): DecideRespon
     latencyMs: 0,
     warning,
     error: warning,
-    terrain: n > 0 ? safeSpecs(n, req.state?.player?.x ?? 0) : [],
+    terrain: n > 0 ? safeSpecs(n) : [],
     hunterMove: wantHunter ? "chase" : undefined,
     director: safeDirector({
       hunter: wantHunter,

@@ -7,10 +7,11 @@ import type {
   TerrainSegmentSpec,
 } from "@shared/types.ts";
 import { walkableDwellSeconds, walkableWidthPx, WALKABLE_PAD_TILES } from "@shared/pads.ts";
-import { shapeGap } from "@shared/pits.ts";
+import { isLethalPit, pitBandAt, shapeGap, type PitBand } from "@shared/pits.ts";
 import {
   AUTO_RUN,
   DEBUG_PAD_LABELS,
+  DEBUG_PIT_DUMP,
   GAME_HEIGHT,
   GAME_WIDTH,
   SPIKE_NUB_KEEP,
@@ -42,10 +43,12 @@ export class TerrainWorld {
   lastEvent: EventBeat = "none";
   private spikeSurfaceSeen = 0;
   private nubCandidates = 0;
-  /** World X of the last pit's trailing pad lip. Cadence clock for `shapeGap`. */
+  /** World X of the last **lethal** (2-tile) pit lip. Cadence clock for `shapeGap`. */
   private lastPitLipX = 0;
   /** Next pad should paint a landing-lip highlight (previous slice ended in a hole). */
   private pendingLandingLip = false;
+  /** Lethal pits this run (survives cull) — playtest dump. */
+  readonly pitLog: { lipX: number; gap: number; band: PitBand }[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {
     this.platforms = scene.physics.add.staticGroup();
@@ -93,6 +96,26 @@ export class TerrainWorld {
     }
     const first = pads[0];
     return { x: first.safeX, y: first.platformY - 28 };
+  }
+
+  /** Live pit cadence for `__neonChase.pits()` / `?pits=1`. */
+  pitTelemetry(): {
+    cursorX: number;
+    lastPitLipX: number;
+    firstPitLipX: number | null;
+    firstPitDistanceTiles: number | null;
+    gaps: number[];
+    pits: { lipX: number; gap: number; band: PitBand }[];
+  } {
+    const first = this.pitLog[0];
+    return {
+      cursorX: Math.round(this.cursorX),
+      lastPitLipX: Math.round(this.lastPitLipX),
+      firstPitLipX: first ? Math.round(first.lipX) : null,
+      firstPitDistanceTiles: first ? Math.floor(first.lipX / TILE) : null,
+      gaps: this.segments.map((seg) => seg.spec.gap),
+      pits: this.pitLog.map((pit) => ({ ...pit, lipX: Math.round(pit.lipX) })),
+    };
   }
 
   append(specs: TerrainSegmentSpec[], source: "jev" | "fallback", plan?: DirectorPlan): void {
@@ -153,7 +176,7 @@ export class TerrainWorld {
     if (this.pendingLandingLip) this.paintLandingLip(objects, startX, platformY, 16, pal);
     this.paintApproachWarn(objects, startX, width, platformY, 16, pal);
     this.paintPit(objects, startX + width, TILE, platformY, pal);
-    this.lastPitLipX = startX + width;
+    // Fake-out is a 1-tile hop — do not tick the lethal-pit clock.
     this.pendingLandingLip = true;
     this.paintPadLabel(objects, startX, platformY, width, "ledge", 1);
     this.cursorX = startX + width + TILE;
@@ -235,7 +258,10 @@ export class TerrainWorld {
     if (gapTiles > 0) {
       this.paintApproachWarn(objects, startX, width, platformY, thickness, pal);
       this.paintPit(objects, lipX, gapTiles * TILE, platformY, pal);
-      this.lastPitLipX = lipX;
+      if (isLethalPit(gapTiles)) {
+        this.lastPitLipX = lipX;
+        this.pitLog.push({ lipX, gap: gapTiles, band: pitBandAt(lipX) });
+      }
       this.pendingLandingLip = true;
     } else {
       this.pendingLandingLip = false;
@@ -264,7 +290,7 @@ export class TerrainWorld {
     surface: TerrainSegmentSpec["surface"],
     gapTiles = 0,
   ): void {
-    if (!DEBUG_PAD_LABELS || surface === "spike") return;
+    if ((!DEBUG_PAD_LABELS && !DEBUG_PIT_DUMP) || surface === "spike") return;
     const tiles = Math.round(width / TILE);
     const dwell = walkableDwellSeconds(width, AUTO_RUN);
     const pit = gapTiles > 0 ? ` · pit${gapTiles}` : "";
@@ -325,6 +351,20 @@ export class TerrainWorld {
         repeat: -1,
       });
       objects.push(chevron);
+    }
+
+    if (DEBUG_PIT_DUMP) {
+      const tiles = Math.round(gapPx / TILE);
+      const stamp = this.scene.add
+        .text(lipX + gapPx / 2, platformY + 28, `${tiles}t ${gapPx}px`, {
+          fontFamily: "monospace",
+          fontSize: "10px",
+          color: "#7ef9ff",
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(5)
+        .setAlpha(0.9);
+      objects.push(stamp);
     }
 
     const leftCliff = this.scene.add

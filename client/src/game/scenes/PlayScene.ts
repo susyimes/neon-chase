@@ -13,6 +13,7 @@ import {
   COMBO_BONUS,
   COMBO_WINDOW_MS,
   DEBUG_PAD_LABELS,
+  DEBUG_PIT_DUMP,
   GAME_HEIGHT,
   GRAVITY,
   HUNTERS_ENABLED,
@@ -23,6 +24,8 @@ import {
   TERRAIN_BATCH,
   TILE,
 } from "../../config.ts";
+import { jumpClearanceDump } from "@shared/jump.ts";
+import { measureLethalPitCadence } from "@shared/pits.ts";
 import { audio } from "../../audio/AudioBus.ts";
 import { CYAN, GOLD, MAGENTA } from "../../palette.ts";
 import { DISABLED_HUNTER_STATE } from "@shared/defaults.ts";
@@ -212,12 +215,27 @@ export class PlayScene extends Phaser.Scene {
     this.pullDecisions(true, HUNTERS_ENABLED);
     this.emitHud();
     this.exposeDebugApi();
+    if (DEBUG_PIT_DUMP) {
+      console.info("[pits] expected cadence", measureLethalPitCadence(72));
+      console.info("[pits] jump clear", jumpClearanceDump());
+      console.info("[pits] live", this.world.pitTelemetry());
+    }
   }
 
   private exposeDebugApi(): void {
     const scene = this;
-    const api: { die: () => void; snapshot?: () => unknown } = {
+    const api: { die: () => void; snapshot?: () => unknown; pits: () => unknown } = {
       die: () => scene.handlePit(),
+      pits: () => ({
+        live: scene.world.pitTelemetry(),
+        expected: measureLethalPitCadence(72),
+        jump: jumpClearanceDump(),
+        player: {
+          x: Math.round(scene.player.x),
+          score: scene.score(),
+          distanceTiles: Math.floor(scene.player.maxX / TILE),
+        },
+      }),
     };
     if (DEBUG_PAD_LABELS) {
       api.snapshot = () => {
