@@ -1,5 +1,5 @@
 import { safeDirector } from "../../shared/defaults.ts";
-import { pacedSolidSpecs } from "../../shared/pits.ts";
+import { blankSolidSpecs } from "../../shared/pits.ts";
 import type {
   DecideRequest,
   DecideResponse,
@@ -8,9 +8,9 @@ import type {
 } from "../../shared/types.ts";
 
 /** Local street when Jev is missing, slow, or errors. Pits follow `shared/pits.ts`. */
-export function safeTerrain(count: number, fromX = 0): TerrainSegmentSpec[] {
+export function safeTerrain(count: number): TerrainSegmentSpec[] {
   const n = Math.max(1, Math.min(3, Math.floor(count)));
-  return pacedSolidSpecs(n, fromX);
+  return blankSolidSpecs(n);
 }
 
 export function safeHunterMove(): HunterMove {
@@ -35,7 +35,7 @@ export function fallbackResult(
     latencyMs: Date.now() - started,
     warning,
     error: warning,
-    terrain: n > 0 ? safeTerrain(n, req.state?.player?.x ?? 0) : [],
+    terrain: n > 0 ? safeTerrain(n) : [],
     hunterMove: wantHunter ? safeHunterMove() : undefined,
     director,
   };

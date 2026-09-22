@@ -14,10 +14,12 @@ Walkable platforms (solids, ledges, gauntlet steps, fake-out colliders) last **~
 Pit / gap cadence lives in `shared/pits.ts` and is applied when the street is built (`TerrainWorld`):
 
 - **2s safe runway** after AGAIN / Enter (no pits), plus ~1.6s spawn i-frames against spikes.
-- **Early** (~2–12s): sparse 2-tile pits (~every 5s).
-- **Mid** (~12–28s) / **late**: denser 2-tile pits so a missed jump ends the run.
-- Authored 1-tile hops can still appear; a 1-tile hole is coyote-walkable, so injected death pits are always **2 tiles (80px)**.
+- **First lethal pit** is the next pad lip after that runway (~480px / ~12 tiles) — not delayed to ~32m by treating world origin as a previous pit.
+- **Early** (~2–12s): sparse 2-tile pits (~every 5s). **Mid** (~12–28s) / **late**: denser (targets ~3.2s / ~2.0s). Only 2-tile holes tick the spacing clock.
+- Authored 1-tile hops can still appear; a 1-tile hole is coyote-walkable, so injected death pits stay **2 tiles (80px)**.
+- **Jump:** `JUMP_V = -580`, coyote **140ms** (`shared/jump.ts`) so a normal jump from the last ~80px of a pad — or a late coyote — clears 80px. Pad-center still misses.
 - Gaps stay `0 | 1 | 2`. Spike keep-rates (`SPIKE_SURFACE_KEEP`, `SPIKE_NUB_KEEP`) are unchanged.
+- `npm test` asserts first-pit distance, early→late densify, and jump clearance. Open `?pits=1` or `window.__neonChase.pits()` for a live dump.
 
 Polish pass follows 花间莉萝 [「为什么你的独立游戏充满廉价感？」](https://www.bilibili.com/video/BV1q843z1EgF) (BV1q843z1EgF): constrained cyan/magenta grade, shared L-corner chrome on title/HUD/game-over, cool fog vs warm neon, parallax city, quiet Jev whisper, distinct confirm/back/tick/hold SFX, faded overlay transitions, contextual particles, land/hurt squash, and one geometric-neon direction — not more features.
 
@@ -192,5 +194,6 @@ Audio is generated in `client/src/audio/AudioBus.ts` (no binary assets).
 | `npm run dev:client` | Vite only (proxies `/api` → `:43124`) |
 | `npm run dev:server` | Jev proxy only |
 | `npm run build` | production client build |
+| `npm test` | pit cadence + 2-tile jump assertions |
 
 Get an API key from the [TypeSafe console](https://console.typesafe.ai/settings/keys) after you have Jev access.
