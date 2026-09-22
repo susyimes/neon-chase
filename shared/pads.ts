@@ -17,8 +17,8 @@
  *                      = 240 px ≈ 1.04 s at auto-run
  *
  * Jev width choices are all at or above this floor (6 / 8 / 10 tiles ≈
- * 1.04 s / 1.39 s / 1.74 s). Gaps stay 0–2 tiles. Spike slabs are hazards,
- * not landing pads, and are not stretched.
+ * 1.04 s / 1.39 s / 1.74 s). Gaps stay 0–2 tiles; pit cadence is in
+ * `pits.ts`. Spike slabs are hazards, not landing pads, and are not stretched.
  */
 export const WALKABLE_PAD_SECONDS = 1;
 export const WALKABLE_PAD_AUTO_RUN = 230;
