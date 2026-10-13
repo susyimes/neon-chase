@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "description": "Neon Chase (霓虹追影) — endless runner driven by TypeSafe Jev",
-  "workspaces": ["client", "server"],
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "scripts": {
     "dev": "concurrently -n server,client -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
     "dev:client": "npm run dev -w client",
@@ -17,5 +20,6 @@
   },
   "engines": {
     "node": ">=20"
-  }
+  },
+  "license": "MIT"
 }
