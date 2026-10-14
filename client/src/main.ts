@@ -1,3 +1,4 @@
+import type { Message } from "./i18n.ts";
 import "./style.css";
 import { audio } from "./audio/AudioBus.ts";
 import { createGame } from "./game/createGame.ts";
@@ -80,7 +81,7 @@ function toTitle(): void {
     game.scene.stop(PlayScene.KEY);
   }
   ui.showPause(false);
-  ui.showTitle(lastStatus.text, lastStatus.kind);
+  ui.showTitle(lastStatus.message, lastStatus.kind);
 }
 
 function setPaused(next: boolean): void {
@@ -100,7 +101,7 @@ function setPaused(next: boolean): void {
   }
 }
 
-const lastStatus = { text: "Checking Jev proxy…", kind: "ok" as "ok" | "warn" };
+const lastStatus = { message: { key: "checking" } as Message, kind: "ok" as "ok" | "warn" };
 
 ui.onPlay(startRun);
 ui.onRetry(startRun);
@@ -109,6 +110,7 @@ ui.onResume(() => setPaused(false));
 ui.onPauseTitle(toTitle);
 
 window.addEventListener("keydown", (e) => {
+  if (e.target instanceof HTMLSelectElement) return;
   if (e.code === "Escape" || e.code === "KeyP") {
     if (game.scene.isActive(PlayScene.KEY) || game.scene.isPaused(PlayScene.KEY)) {
       e.preventDefault();
@@ -123,18 +125,18 @@ window.addEventListener("keydown", (e) => {
 
 void jev.health().then((health) => {
   if (!health) {
-    lastStatus.text = "Proxy offline — local terrain.";
+    lastStatus.message = { key: "localOffline" };
     lastStatus.kind = "warn";
   } else if (!health.jevConfigured) {
-    lastStatus.text = "No key — local terrain. Jev stays on the server.";
+    lastStatus.message = { key: "localUnconfigured" };
     lastStatus.kind = "warn";
   } else {
-    lastStatus.text = `Jev ready · ${health.model}`;
+    lastStatus.message = { key: "modelReady", params: { model: health.model } };
     lastStatus.kind = "ok";
   }
   if (ui.overlayOn("overlay-title")) {
-    ui.showTitle(lastStatus.text, lastStatus.kind);
+    ui.showTitle(lastStatus.message, lastStatus.kind);
   }
 });
 
-ui.showTitle(lastStatus.text, lastStatus.kind);
+ui.showTitle(lastStatus.message, lastStatus.kind);

@@ -70,3 +70,8 @@ Phaser 3、TypeScript、Vite；Hono / Node.js 提供可选 Jev 代理。
 ## 许可证
 
 本项目自有代码采用 [MIT 许可证](LICENSE)。第三方代码、依赖、字体及素材保留其原有条款，参见 [NOTICE.md](NOTICE.md)；代码许可证不把第三方素材重新授权为 MIT。
+
+
+### Language / 语言
+
+Use the visible **English / 简体中文** selector at the top right. The first supported language in the browser preference list determines the initial locale (`zh` → Simplified Chinese, `en` → English; otherwise English), unless you have saved an explicit choice. Switching updates menus, HUD, audio labels, and canvas debug labels immediately without restarting the run. Preferences use local storage; restricted storage falls back to the current page. / 右上角可随时切换英语与简体中文，不会重置当前游戏进度；浏览器禁止存储时，选择仍在当前页面生效。

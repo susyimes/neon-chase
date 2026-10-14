@@ -1,3 +1,4 @@
+import { en, i18n, t, type Message, type MessageKey } from "./i18n.ts";
 import { audio } from "./audio/AudioBus.ts";
 import type { ControlState } from "./game/entities/Player.ts";
 import type { HudSnapshot, RunResult } from "./game/scenes/PlayScene.ts";
@@ -8,24 +9,12 @@ const $ = <T extends HTMLElement>(id: string): T => {
   return el as T;
 };
 
-const EVENT_LABEL: Record<string, string> = {
-  none: "",
-  ambush_spike_run: "AMBUSH",
-  orb_fountain: "ORB WELL",
-  narrow_gauntlet: "GAUNTLET",
-  calm_breather: "BREATHER",
-};
-
 function quietWarning(raw: string): string {
-  const t = raw.toLowerCase();
-  if (t.includes("typesafe") || t.includes("no ")) return "Offline terrain";
-  if (t.includes("timeout") || t.includes("late")) return "Jev late · offline";
-  if (t.includes("network") || t.includes("proxy")) return "Proxy offline";
-  return "Offline terrain";
+  return t(/timeout|late/i.test(raw) ? "lateWarning" : "offlineWarning");
 }
 
 export function bindUi(controls: ControlState): {
-  showTitle: (status: string, kind?: "ok" | "warn") => void;
+  showTitle: (status: Message, kind?: "ok" | "warn") => void;
   showPlay: () => void;
   showGameOver: (result: RunResult) => void;
   showPause: (on: boolean) => void;
@@ -50,6 +39,17 @@ export function bindUi(controls: ControlState): {
   const combo = $("hud-combo");
   const veil = $("fx-veil");
   const mute = $("btn-mute");
+  const language = $<HTMLSelectElement>("language-select");
+  let lastStatus: Message = { key: "checking" };
+  let lastHud: HudSnapshot | undefined;
+  let lastResult: RunResult | undefined;
+  const staticText = [...document.querySelectorAll<HTMLElement>("[data-i18n]")];
+  const accessibleText = [...document.querySelectorAll<HTMLElement>("[data-i18n-aria]")];
+  language.addEventListener("change", () => {
+    if (language.value === "en" || language.value === "zh-CN") i18n.setLocale(language.value);
+  });
+  // Native selection keys must not also trigger menu shortcuts.
+  language.addEventListener("keydown", (event) => event.stopPropagation());
 
   const setOverlay = (el: HTMLElement, on: boolean): void => {
     el.classList.toggle("is-on", on);
@@ -62,7 +62,9 @@ export function bindUi(controls: ControlState): {
   const syncMute = (): void => {
     mute.classList.toggle("is-muted", audio.isMuted);
     mute.setAttribute("aria-pressed", audio.isMuted ? "true" : "false");
-    mute.textContent = audio.isMuted ? "MUTE" : "LIVE";
+    mute.textContent = t(audio.isMuted ? "audioMuted" : "audioLive");
+    mute.title = t(audio.isMuted ? "audioUnmute" : "audioMute");
+    mute.setAttribute("aria-label", mute.title);
   };
 
   audio.onChange = () => syncMute();
@@ -78,16 +80,18 @@ export function bindUi(controls: ControlState): {
     veil.classList.add(kind === "magenta" ? "flash-magenta" : "flash-cyan");
   };
 
-  const showTitle = (text: string, kind: "ok" | "warn" = "ok"): void => {
+  const showTitle = (message: Message, kind: "ok" | "warn" = "ok"): void => {
     setOverlay(title, true);
     setOverlay(gameover, false);
     setOverlay(pause, false);
     hud.classList.remove("is-on");
-    status.textContent = text;
+    lastStatus = message;
+    status.textContent = t(message.key, message.params);
     status.className = `status ${kind}`;
   };
 
   const showPlay = (): void => {
+    lastHud = undefined;
     flashVeil("cyan");
     setOverlay(title, false);
     setOverlay(gameover, false);
@@ -98,11 +102,12 @@ export function bindUi(controls: ControlState): {
   };
 
   const showGameOver = (result: RunResult): void => {
+    lastResult = result;
     flashVeil("magenta");
     setOverlay(title, false);
     setOverlay(pause, false);
     $("go-score").textContent = String(result.score);
-    $("go-distance").textContent = `${result.distance}m`;
+    $("go-distance").textContent = t("meters", { distance: result.distance });
     $("go-calls").textContent = String(result.callCount);
     $("go-combo").textContent = result.combo > 1 ? `x${result.combo}` : "—";
     window.setTimeout(() => {
@@ -116,6 +121,7 @@ export function bindUi(controls: ControlState): {
   };
 
   const renderHud = (snap: HudSnapshot): void => {
+    lastHud = snap;
     const scoreEl = $("hud-score");
     if (scoreEl.textContent !== String(snap.score)) {
       scoreEl.textContent = String(snap.score);
@@ -124,18 +130,19 @@ export function bindUi(controls: ControlState): {
       scoreEl.classList.add("pop");
     }
     $("hud-hp").textContent = "●".repeat(Math.max(0, snap.hp)).padEnd(snap.maxHp, "○");
-    const src = snap.source === "jev" ? "Jev" : snap.source === "fallback" ? "Local" : "Jev";
-    $("hud-jev").textContent = `${src} · ${snap.latencyMs || "—"}ms`;
-    $("hud-jev").title = snap.hunterMove
-      ? `${snap.motif} · ${snap.hunterMove} · flow ${snap.difficulty}`
-      : `${snap.motif} · flow ${snap.difficulty}`;
+    const src = t(snap.source === "fallback" ? "local" : "model");
+    $("hud-jev").textContent = snap.source === "none" ? t("generating") : t("generation", { source: src, latency: snap.latencyMs || "—" });
+    const hunterKey = `hunter_${snap.hunterMove}` as MessageKey;
+    const hunter = snap.hunterMove && hunterKey in en ? t(hunterKey) : "";
+    $("hud-jev").title = [t(`motif_${snap.motif}`), hunter, t("flow", { difficulty: snap.difficulty })].filter(Boolean).join(" · ");
+    $("hud-speed").textContent = [t("speedValue", { speed: snap.speed }), t("flow", { difficulty: snap.difficulty })].join(" · ");
     if (snap.combo >= 2) {
       combo.hidden = false;
       $("hud-combo-n").textContent = String(snap.combo);
     } else {
       combo.hidden = true;
     }
-    const label = EVENT_LABEL[snap.event] ?? "";
+    const label = t(`event_${snap.event}`);
     if (label) {
       beat.hidden = false;
       beat.textContent = label;
@@ -149,6 +156,19 @@ export function bindUi(controls: ControlState): {
       warning.hidden = true;
     }
   };
+
+  const renderLocale = (): void => {
+    document.title = t("pageTitle");
+    language.value = i18n.locale;
+    for (const el of staticText) el.textContent = t(el.dataset.i18n as MessageKey);
+    for (const el of accessibleText) el.setAttribute("aria-label", t(el.dataset.i18nAria as MessageKey));
+    status.textContent = t(lastStatus.key, lastStatus.params);
+    syncMute();
+    if (lastHud) renderHud(lastHud);
+    if (lastResult) $("go-distance").textContent = t("meters", { distance: lastResult.distance });
+  };
+  i18n.subscribe(renderLocale);
+  renderLocale();
 
   const onPlay = (fn: () => void): void => {
     $("btn-play").addEventListener("click", fn);

@@ -47,6 +47,7 @@ export interface PlayHooks {
 }
 
 export interface HudSnapshot {
+  speed: number;
   score: number;
   hp: number;
   maxHp: number;
@@ -504,6 +505,7 @@ export class PlayScene extends Phaser.Scene {
 
   private emitHud(): void {
     this.hooks.onHud({
+      speed: Math.round(this.player.vx),
       score: this.score(),
       hp: this.player.hp,
       maxHp: MAX_HP,

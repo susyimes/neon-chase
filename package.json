@@ -12,7 +12,7 @@
     "dev:client": "npm run dev -w client",
     "dev:server": "npm run dev -w server",
     "build": "npm run build -w client",
-    "test": "node --experimental-strip-types --no-warnings scripts/assert-pits.ts",
+    "test": "node --experimental-strip-types --no-warnings scripts/assert-pits.ts && node --experimental-strip-types --no-warnings scripts/assert-i18n.ts",
     "start": "npm run start -w server"
   },
   "devDependencies": {

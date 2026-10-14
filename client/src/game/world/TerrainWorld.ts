@@ -1,3 +1,4 @@
+import { i18n, t, type Message } from "../../i18n.ts";
 import Phaser from "phaser";
 import type {
   DirectorPlan,
@@ -293,17 +294,27 @@ export class TerrainWorld {
     if ((!DEBUG_PAD_LABELS && !DEBUG_PIT_DUMP) || surface === "spike") return;
     const tiles = Math.round(width / TILE);
     const dwell = walkableDwellSeconds(width, AUTO_RUN);
-    const pit = gapTiles > 0 ? ` · pit${gapTiles}` : "";
+    const copy = (): Message => ({ key: "padLabel", params: { tiles, seconds: dwell.toFixed(2), pit: gapTiles > 0 ? t("pitLabel", { tiles: gapTiles }) : "" } });
     const label = this.scene.add
-      .text(startX + 8, platformY - 18, `${tiles}t · ${dwell.toFixed(2)}s${pit}`, {
-        fontFamily: "monospace",
+      .text(startX + 8, platformY - 18, t(copy().key, copy().params), {
+        fontFamily: '"Noto Sans SC", "Microsoft YaHei", monospace',
         fontSize: "11px",
         color: "#7ef9ff",
       })
       .setOrigin(0, 1)
       .setDepth(8)
       .setAlpha(0.85);
+    this.localizeLabel(label, copy);
     objects.push(label);
+  }
+
+  /** Update existing debug canvas text even while paused; release listeners on cull/shutdown. */
+  private localizeLabel(label: Phaser.GameObjects.Text, copy: () => Message): void {
+    const unsubscribe = i18n.subscribe(() => {
+      const message = copy();
+      label.setText(t(message.key, message.params));
+    });
+    label.once(Phaser.GameObjects.Events.DESTROY, unsubscribe);
   }
 
   /** Keep ~SPIKE_SURFACE_KEEP of Jev spike slabs; event spikes stay as authored. */
@@ -356,14 +367,15 @@ export class TerrainWorld {
     if (DEBUG_PIT_DUMP) {
       const tiles = Math.round(gapPx / TILE);
       const stamp = this.scene.add
-        .text(lipX + gapPx / 2, platformY + 28, `${tiles}t ${gapPx}px`, {
-          fontFamily: "monospace",
+        .text(lipX + gapPx / 2, platformY + 28, t("pitStamp", { tiles, pixels: gapPx }), {
+          fontFamily: '"Noto Sans SC", "Microsoft YaHei", monospace',
           fontSize: "10px",
           color: "#7ef9ff",
         })
         .setOrigin(0.5, 0)
         .setDepth(5)
         .setAlpha(0.9);
+      this.localizeLabel(stamp, () => ({ key: "pitStamp", params: { tiles, pixels: gapPx } }));
       objects.push(stamp);
     }
 
